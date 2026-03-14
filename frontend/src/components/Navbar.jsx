@@ -26,7 +26,7 @@ const Navbar = ({ onSearch }) => {
 
                 
                 <img
-                    src={logo}
+                    src={'../logo/logo.png'}
                     alt="BlushVeil"
                     onClick={() => navigate('/')}
                      className="h-15 cursor-pointer shrink-0 object-contain"
