@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import logo from '../logo/navlogo.png'
 
 const Navbar = ({ onSearch }) => {
-    const { user, logout, isAdmin } = useAuth()
+    const { user, logout, isAdmin, isLoading } = useAuth()   // ← add isLoading here
     const navigate = useNavigate()
     const [query, setQuery] = useState('')
     const [menuOpen, setMenuOpen] = useState(false)
@@ -24,7 +24,7 @@ const Navbar = ({ onSearch }) => {
         <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
             <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
 
-                {/* Logo */}
+                {/* Logo - keep exactly as is */}
                 <img
                     src={logo}
                     alt="BlushVeil"
@@ -47,9 +47,14 @@ const Navbar = ({ onSearch }) => {
                     />
                 </form>
 
-                {/* Desktop Auth Buttons */}
+                {/* Desktop Auth Area */}
                 <div className="hidden sm:flex items-center gap-2 ml-auto shrink-0">
-                    {user ? (
+                    {isLoading ? (
+                        // During auth check → show placeholder to prevent flash
+                        <div className="flex items-center gap-2">
+                            <div className="h-9 w-24 bg-gray-100 rounded-full animate-pulse" />
+                        </div>
+                    ) : user ? (
                         <>
                             {/* Profile Button */}
                             <button
@@ -109,7 +114,10 @@ const Navbar = ({ onSearch }) => {
                             className="bg-transparent outline-none text-sm w-full"
                         />
                     </form>
-                    {user ? (
+
+                    {isLoading ? (
+                        <div className="h-10 bg-gray-100 rounded animate-pulse" />
+                    ) : user ? (
                         <>
                             <button onClick={() => { navigate('/profile'); setMenuOpen(false) }}
                                 className="flex items-center gap-2 text-sm font-medium py-2">
