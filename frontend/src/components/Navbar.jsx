@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Search, LogIn, LogOut, LayoutDashboard, Menu, X, UserCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-
+import logo from '../logo/logo.png'
 
 const Navbar = ({ onSearch }) => {
     const { user, logout, isAdmin, isLoading } = useAuth()   // ← add isLoading here
@@ -26,7 +26,7 @@ const Navbar = ({ onSearch }) => {
 
                 
                 <img
-                    src={'../logo/logo.png'}
+                    src={logo}
                     alt="BlushVeil"
                     onClick={() => navigate('/')}
                      className="h-15 cursor-pointer shrink-0 object-contain"
