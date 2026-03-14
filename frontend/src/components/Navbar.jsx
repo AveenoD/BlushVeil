@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Search, LogIn, LogOut, LayoutDashboard, Menu, X, UserCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import logo from '../logo/logo.png'
+import logo from '../logo/navlogo.png'
 
 const Navbar = ({ onSearch }) => {
     const { user, logout, isAdmin, isLoading } = useAuth()   // ← add isLoading here
