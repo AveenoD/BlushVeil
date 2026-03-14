@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@font-face {
+    font-family: 'JayagiriSans';
+    src: url('./assets/fonts/ja.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}

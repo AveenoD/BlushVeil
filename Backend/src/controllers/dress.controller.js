@@ -5,8 +5,12 @@ import uploadOnCloudinary, { deleteFromCloudinary } from '../utils/cloudinary.js
 import { Dress } from '../models/dress.models.js'
 import { isValidObjectId } from "mongoose";
 
+
+
 const addDress = asyncHandler(async (req, res) => {
     const { name, description, price, category, stock } = req.body
+    console.log("File received:", req.file)
+    console.log("Body received:", req.body)
 
     if ([name, description, category].some(field => field.trim() === "")) {
         throw new ApiError(400, "All the fields are required")
@@ -19,10 +23,9 @@ const addDress = asyncHandler(async (req, res) => {
 
     const dressImage = await uploadOnCloudinary(dressImageLocalPath)
 
-    if (!dressImage.url) {
-        throw new ApiError(400, "Error while uploading Image")
-
-    }
+    if (!dressImage || !dressImage.url) {
+    throw new ApiError(400, "Error while uploading Image")
+}
 
     const createdDress = await Dress.create({
         name,
@@ -146,8 +149,17 @@ const getDressById = asyncHandler(async (req, res) => {
 
 
 const getAllDresses = asyncHandler(async (req, res) => {
-    const dresses = await Dress.find()
+    const { category, search } = req.query
+    const filter = {}
+     if (category && category !== 'All') {
+        filter.category = category
+    }
 
+
+    if (search) {
+        filter.name = { $regex: search, $options: 'i' }
+    }
+    const dresses = await Dress.find(filter)
     return res
         .status(200)
         .json(new ApiResponse(200, dresses, "Dresses fetched successfully"))

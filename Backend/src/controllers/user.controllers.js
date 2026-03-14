@@ -76,7 +76,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({
         $or: [{ phoneNumber }, { email }]
-    })
+    }).select("+password")
     if (!user) {
         throw new ApiError(404, "User does not exist's!")
     }
