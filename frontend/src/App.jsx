@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import ProductPage from './pages/ProductPage'
 import AdminPanel from './pages/AdminPanel'
+import ProfilePage from './pages/ProfilePage'
 
 function App() {
   return (
@@ -20,6 +21,11 @@ function App() {
           <Route path="/admin" element={
             <ProtectedRoute adminOnly={true}>
               <AdminPanel />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           } />
         </Routes>

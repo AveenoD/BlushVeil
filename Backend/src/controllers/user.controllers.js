@@ -145,7 +145,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
                 email
             }
         },
-        { new: true }
+        { returnDocument: 'after' }
     ).select("-password")
     return res
         .status(200)
@@ -159,7 +159,7 @@ const updatePassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are required");
     }
 
-    const user = await User.findById(req.user?._id)
+    const user = await User.findById(req.user?._id).select("+password")
     if(!user)
     {
         throw new ApiError(404, "User Not Found")
@@ -197,7 +197,7 @@ const updateUserAddress = asyncHandler(async(req, res) =>{
     const user = await User.findByIdAndUpdate(
     req.user._id,
     { $set: { address: updatedFields } },  
-    { new: true }                           
+    { returnDocument: 'after' }                         
 ).select("-password")  
 
 return res

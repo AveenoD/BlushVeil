@@ -1,20 +1,19 @@
 import { useState } from 'react'
-import { Search, LogIn, LogOut, LayoutDashboard, Menu, X } from 'lucide-react'
+import { Search, LogIn, LogOut, LayoutDashboard, Menu, X, UserCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import navlogo from '../../public/navlogo.png'
+import logo from '../logo/navlogo.png'
+
 const Navbar = ({ onSearch }) => {
     const { user, logout, isAdmin } = useAuth()
     const navigate = useNavigate()
     const [query, setQuery] = useState('')
     const [menuOpen, setMenuOpen] = useState(false)
 
-
     const handleSearch = (e) => {
         e.preventDefault()
         if (onSearch) onSearch(query)
     }
-
 
     const handleLogout = async () => {
         await logout()
@@ -27,10 +26,10 @@ const Navbar = ({ onSearch }) => {
 
                 {/* Logo */}
                 <img
-                    src={navlogo}
+                    src={logo}
                     alt="BlushVeil"
                     onClick={() => navigate('/')}
-                    className="h-30 w-30 cursor-pointer object-contain"
+                    className="h-30 w-30 cursor-pointer shrink-0 object-contain"
                 />
 
                 {/* Search Bar */}
@@ -52,13 +51,24 @@ const Navbar = ({ onSearch }) => {
                 <div className="hidden sm:flex items-center gap-2 ml-auto shrink-0">
                     {user ? (
                         <>
+                            {/* Profile Button */}
+                            <button
+                                onClick={() => navigate('/profile')}
+                                className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                                <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white text-xs font-semibold">
+                                    {user.fullName?.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="max-w-[80px] truncate">{user.fullName?.split(' ')[0]}</span>
+                            </button>
+
                             {isAdmin && (
                                 <button
                                     onClick={() => navigate('/admin')}
                                     className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
                                 >
                                     <LayoutDashboard size={15} />
-                                    Admin Panel
+                                    Admin
                                 </button>
                             )}
                             <button
@@ -81,10 +91,7 @@ const Navbar = ({ onSearch }) => {
                 </div>
 
                 {/* Mobile Menu Toggle */}
-                <button
-                    className="sm:hidden ml-auto"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                >
+                <button className="sm:hidden ml-auto" onClick={() => setMenuOpen(!menuOpen)}>
                     {menuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
             </div>
@@ -99,22 +106,29 @@ const Navbar = ({ onSearch }) => {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Search dresses..."
-                            className="bg-transparent outline-none text-sm w-full text-gray-700 placeholder-gray-400"
+                            className="bg-transparent outline-none text-sm w-full"
                         />
                     </form>
                     {user ? (
                         <>
+                            <button onClick={() => { navigate('/profile'); setMenuOpen(false) }}
+                                className="flex items-center gap-2 text-sm font-medium py-2">
+                                <UserCircle size={15} /> My Profile
+                            </button>
                             {isAdmin && (
-                                <button onClick={() => { navigate('/admin'); setMenuOpen(false) }} className="flex items-center gap-2 text-sm font-medium py-2">
+                                <button onClick={() => { navigate('/admin'); setMenuOpen(false) }}
+                                    className="flex items-center gap-2 text-sm font-medium py-2">
                                     <LayoutDashboard size={15} /> Admin Panel
                                 </button>
                             )}
-                            <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-medium py-2 text-red-500">
+                            <button onClick={handleLogout}
+                                className="flex items-center gap-2 text-sm font-medium py-2 text-red-500">
                                 <LogOut size={15} /> Logout
                             </button>
                         </>
                     ) : (
-                        <button onClick={() => { navigate('/login'); setMenuOpen(false) }} className="flex items-center gap-2 text-sm font-medium py-2">
+                        <button onClick={() => { navigate('/login'); setMenuOpen(false) }}
+                            className="flex items-center gap-2 text-sm font-medium py-2">
                             <LogIn size={15} /> Login
                         </button>
                     )}
