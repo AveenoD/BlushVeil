@@ -211,6 +211,215 @@ All endpoints can be tested using **Postman**. Import the collection and set:
 - `base_url` → `http://localhost:5000`
 - `accessToken` → received after login
 
+# 👗 BlushVeil — Frontend
+
+A minimal, clean React.js frontend for the BlushVeil Ladies Clothing Store. Features a public landing page, category filtering, search, dress detail modal, and a protected admin panel.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React.js (Vite) |
+| Styling | Tailwind CSS v4 |
+| Routing | React Router DOM |
+| HTTP Client | Axios |
+| Icons | Lucide React |
+| State Management | React Context API |
+
+---
+
+## 📁 Folder Structure
+
+```
+frontend/
+├── src/
+│   ├── api/
+│   │   └── axios.js           → Axios instance with interceptor
+│   ├── assets/
+│   │   ├── logo.png           → BlushVeil logo
+│   │   └── fonts/
+│   │       └── ja.ttf         → Custom font
+│   ├── components/
+│   │   ├── Navbar.jsx         → Logo, search, auth buttons
+│   │   ├── CategoryBar.jsx    → YouTube-style category filter
+│   │   ├── DressCard.jsx      → Individual dress card
+│   │   ├── DressModal.jsx     → Desktop popup for dress details
+│   │   └── ProtectedRoute.jsx → Guards auth/admin routes
+│   ├── context/
+│   │   └── AuthContext.jsx    → Global auth state
+│   ├── pages/
+│   │   ├── Home.jsx           → Landing page with dress grid
+│   │   ├── Login.jsx          → Login page
+│   │   ├── Register.jsx       → Register page
+│   │   ├── ProductPage.jsx    → Mobile dress detail page
+│   │   ├── ProfilePage.jsx    → User profile, password, address
+│   │   └── AdminPanel.jsx     → Admin dashboard (CRUD)
+│   ├── App.jsx                → Route definitions
+│   ├── main.jsx               → Entry point
+│   └── index.css              → Tailwind imports + custom font
+├── .env
+├── index.html
+└── vite.config.js
+```
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file in the frontend root:
+
+```env
+VITE_API_URL=http://localhost:5000/api/v1
+```
+
+For production:
+```env
+VITE_API_URL=https://your-backend.onrender.com/api/v1
+```
+
+---
+
+## 🚀 Getting Started
+
+```bash
+# Navigate to frontend
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+---
+
+## 📱 Pages & Features
+
+### 🏠 Home Page `/`
+- Displays all dresses in a responsive grid
+- YouTube-style category filter bar (All, Casual, Formal, Party, Nighty, Undergarment)
+- Search bar — filters by dress name
+- Desktop → click dress = popup modal
+- Mobile → click dress = full product page
+- Skeleton loading state
+
+### 🔐 Login `/login`
+- Email + password login
+- Stores user + token in localStorage
+- Redirects to home on success
+
+### 📝 Register `/register`
+- Full name, email, phone, password
+- Redirects to login on success
+
+### 👗 Product Page `/dress/:id` (Mobile)
+- Full dress details
+- Stock availability indicator
+- Back navigation
+
+### 👤 Profile Page `/profile` (Protected)
+Three tabs:
+- **Profile** — update name and email
+- **Password** — change current password
+- **Address** — update delivery address
+
+### 🛡️ Admin Panel `/admin` (Admin Only)
+- Stats: Total products, total stock, out of stock count
+- Full dress table with image, name, category, price, stock
+- Add new dress with image upload
+- Edit existing dress
+- Delete dress (with confirmation)
+
+---
+
+## 🔐 Authentication Flow
+
+```
+User logs in → accessToken stored in:
+  - window.__accessToken (for axios interceptor)
+  - localStorage (persists on refresh)
+
+Axios interceptor → adds token to every request header:
+  Authorization: Bearer <token>
+
+On refresh → token restored from localStorage
+On logout → token cleared from both
+```
+
+---
+
+## 🧩 Components
+
+### `Navbar`
+- Logo (custom font image)
+- Search bar with submit
+- Logged out → Login button
+- Logged in → Profile avatar + name, Admin button (if admin), Logout
+- Mobile responsive with hamburger menu
+
+### `CategoryBar`
+- Sticky below navbar
+- Pill buttons for each category
+- Active category highlighted in black
+
+### `DressCard`
+- 3:4 aspect ratio image
+- Hover zoom effect
+- Name, category, price
+
+### `DressModal` (Desktop)
+- Side-by-side image + details
+- Category, name, price, description
+- Stock indicator
+- Close on backdrop click or Escape key
+
+### `ProtectedRoute`
+- Redirects to `/login` if not logged in
+- Redirects to `/` if not admin (when `adminOnly={true}`)
+
+---
+
+## 📱 Mobile Testing (Local Network)
+
+To test on phone using same WiFi:
+
+```bash
+# vite.config.js
+server: {
+  host: '0.0.0.0',
+  port: 5173
+}
+```
+
+```env
+# .env
+VITE_API_URL=http://YOUR_LOCAL_IP:5000/api/v1
+```
+
+Open on phone: `http://YOUR_LOCAL_IP:5173`
+
+---
+
+## 🚀 Deployment (Vercel)
+
+1. Push to GitHub
+2. Go to vercel.com → New Project
+3. Settings:
+```
+Root Directory: frontend
+Framework: Vite
+Build Command: npm run build
+Output Directory: dist
+```
+4. Add environment variable:
+```
+VITE_API_URL=https://your-backend.onrender.com/api/v1
+```
+5. Deploy!
+
 ---
 
 ## 👨‍💻 Author
