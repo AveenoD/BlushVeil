@@ -24,12 +24,12 @@ const Navbar = ({ onSearch }) => {
         <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
             <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
 
-                {/* Logo - keep exactly as is */}
+                
                 <img
                     src={logo}
                     alt="BlushVeil"
                     onClick={() => navigate('/')}
-                     className="h-10 w-32 cursor-pointer shrink-0 object-contain"
+                     className="h-10 cursor-pointer shrink-0 object-contain"
                 />
 
                 {/* Search Bar */}
