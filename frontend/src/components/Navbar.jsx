@@ -29,7 +29,7 @@ const Navbar = ({ onSearch }) => {
                     src={logo}
                     alt="BlushVeil"
                     onClick={() => navigate('/')}
-                     className="h-14 w-autocursor-pointer shrink-0 object-contain"
+                     className="h-24 w-autocursor-pointer shrink-0 object-contain"
                 />
 
                 {/* Search Bar */}
