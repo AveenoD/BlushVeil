@@ -56,7 +56,8 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    isLoading,               // ← must expose this!
+    setUser,
+    isLoading,               
     isAdmin: user?.role === 'admin',
     login,
     logout,

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, X, Package, LayoutDashboard } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Package, LayoutDashboard, ClipboardList } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
 const CATEGORIES = ['Casual', 'Formal', 'Party', 'Nighty', 'Undergarment']
+const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 
-const emptyForm = { name: '', description: '', price: '', category: 'Casual', stock: '' }
+const emptyForm = { name: '', description: '', price: '', category: 'Casual', stock: '', colors: '' }
 
 const AdminPanel = () => {
     const navigate = useNavigate()
@@ -14,12 +15,12 @@ const AdminPanel = () => {
     const [showForm, setShowForm] = useState(false)
     const [editingDress, setEditingDress] = useState(null)
     const [form, setForm] = useState(emptyForm)
+    const [selectedSizes, setSelectedSizes] = useState([])
     const [imageFile, setImageFile] = useState(null)
     const [imagePreview, setImagePreview] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
 
-    // TODO: you write - fetch all dresses GET /api/v1/dresses
     useEffect(() => {
         const fetchDresses = async () => {
             try {
@@ -34,9 +35,7 @@ const AdminPanel = () => {
         fetchDresses()
     }, [])
 
-    const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value })
-    }
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
     const handleImageChange = (e) => {
         const file = e.target.files[0]
@@ -46,9 +45,18 @@ const AdminPanel = () => {
         }
     }
 
+    const toggleSize = (size) => {
+        setSelectedSizes(prev =>
+            prev.includes(size)
+                ? prev.filter(s => s !== size)
+                : [...prev, size]
+        )
+    }
+
     const openAdd = () => {
         setEditingDress(null)
         setForm(emptyForm)
+        setSelectedSizes(['S', 'M', 'L', 'XL'])
         setImageFile(null)
         setImagePreview('')
         setError('')
@@ -62,16 +70,16 @@ const AdminPanel = () => {
             description: dress.description,
             price: dress.price,
             category: dress.category,
-            stock: dress.stock
+            stock: dress.stock,
+            colors: dress.colors?.join(', ') || ''
         })
+        setSelectedSizes(dress.sizes || [])
         setImagePreview(dress.image?.url || '')
         setImageFile(null)
         setError('')
         setShowForm(true)
     }
 
-    // TODO: you write - POST /api/v1/dresses/add with FormData
-    // TODO: you write - PATCH /api/v1/dresses/update/:id with FormData
     const handleSubmit = async (e) => {
         e.preventDefault()
         setSubmitting(true)
@@ -83,9 +91,17 @@ const AdminPanel = () => {
             formData.append('price', form.price)
             formData.append('category', form.category)
             formData.append('stock', form.stock)
+            formData.append('sizes', JSON.stringify(selectedSizes))
+
+            // Colors — comma separated string to array
+            const colorsArray = form.colors
+                .split(',')
+                .map(c => c.trim())
+                .filter(c => c !== '')
+            formData.append('colors', JSON.stringify(colorsArray))
+
             if (imageFile) formData.append('dressImage', imageFile)
 
-            console.log(dresses)
             if (editingDress) {
                 const res = await api.patch(`/dresses/update/${editingDress._id}`, formData)
                 setDresses(prev => prev.map(d => d._id === editingDress._id ? res.data.data : d))
@@ -122,12 +138,21 @@ const AdminPanel = () => {
                     <LayoutDashboard size={20} />
                     <span className="font-semibold text-gray-900">Admin Panel</span>
                 </div>
-                <button
-                    onClick={() => navigate('/')}
-                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-                >
-                    ← Back to Store
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => navigate('/admin/orders')}
+                        className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+                    >
+                        <ClipboardList size={15} />
+                        Orders
+                    </button>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                    >
+                        ← Back to Store
+                    </button>
+                </div>
             </div>
 
             <div className="max-w-6xl mx-auto px-4 py-8">
@@ -180,6 +205,7 @@ const AdminPanel = () => {
                                         <th className="px-4 py-3 text-xs font-medium text-gray-400">Name</th>
                                         <th className="px-4 py-3 text-xs font-medium text-gray-400">Category</th>
                                         <th className="px-4 py-3 text-xs font-medium text-gray-400">Price</th>
+                                        <th className="px-4 py-3 text-xs font-medium text-gray-400">Sizes</th>
                                         <th className="px-4 py-3 text-xs font-medium text-gray-400">Stock</th>
                                         <th className="px-4 py-3 text-xs font-medium text-gray-400">Actions</th>
                                     </tr>
@@ -188,36 +214,29 @@ const AdminPanel = () => {
                                     {dresses.map((dress) => (
                                         <tr key={dress._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-3">
-                                                <img
-                                                    src={dress.image?.url}
-                                                    alt={dress.name}
-                                                    className="w-10 h-10 rounded-lg object-cover bg-gray-100"
-                                                />
+                                                <img src={dress.image?.url} alt={dress.name}
+                                                    className="w-10 h-10 rounded-lg object-cover bg-gray-100" />
                                             </td>
                                             <td className="px-4 py-3 font-medium text-gray-900">{dress.name}</td>
                                             <td className="px-4 py-3 text-gray-500">{dress.category}</td>
                                             <td className="px-4 py-3 font-medium text-gray-900">₹{dress.price}</td>
+                                            <td className="px-4 py-3 text-gray-500 text-xs">
+                                                {dress.sizes?.join(', ') || '—'}
+                                            </td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium
-                                                    ${dress.stock === 0
-                                                        ? 'bg-red-50 text-red-500'
-                                                        : 'bg-green-50 text-green-600'
-                                                    }`}>
+                                                    ${dress.stock === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
                                                     {dress.stock}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => openEdit(dress)}
-                                                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
-                                                    >
+                                                    <button onClick={() => openEdit(dress)}
+                                                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors">
                                                         <Pencil size={14} />
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDelete(dress._id)}
-                                                        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-500 transition-colors"
-                                                    >
+                                                    <button onClick={() => handleDelete(dress._id)}
+                                                        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-500 transition-colors">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
@@ -246,9 +265,7 @@ const AdminPanel = () => {
 
                         <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
                             {error && (
-                                <div className="bg-red-50 text-red-500 text-sm px-4 py-3 rounded-xl">
-                                    {error}
-                                </div>
+                                <div className="bg-red-50 text-red-500 text-sm px-4 py-3 rounded-xl">{error}</div>
                             )}
 
                             {/* Image Upload */}
@@ -260,12 +277,8 @@ const AdminPanel = () => {
                                     ) : (
                                         <p className="text-sm text-gray-400">Click to upload image</p>
                                     )}
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageChange}
-                                        className="mt-2 text-xs text-gray-500 w-full"
-                                    />
+                                    <input type="file" accept="image/*" onChange={handleImageChange}
+                                        className="mt-2 text-xs text-gray-500 w-full" />
                                 </div>
                             </div>
 
@@ -304,6 +317,37 @@ const AdminPanel = () => {
                                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gray-400 bg-white">
                                     {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                                 </select>
+                            </div>
+
+                            {/* Sizes */}
+                            <div>
+                                <label className="text-xs font-medium text-gray-500 mb-2 block">Sizes</label>
+                                <div className="flex gap-2 flex-wrap">
+                                    {ALL_SIZES.map(size => (
+                                        <button
+                                            key={size}
+                                            type="button"
+                                            onClick={() => toggleSize(size)}
+                                            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors
+                                                ${selectedSizes.includes(size)
+                                                    ? 'bg-black text-white border-black'
+                                                    : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                                                }`}
+                                        >
+                                            {size}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Colors */}
+                            <div>
+                                <label className="text-xs font-medium text-gray-500 mb-1 block">
+                                    Colors <span className="text-gray-400 font-normal">(comma separated)</span>
+                                </label>
+                                <input name="colors" value={form.colors} onChange={handleChange}
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gray-400"
+                                    placeholder="Red, Blue, Green, Black" />
                             </div>
 
                             <button type="submit" disabled={submitting}

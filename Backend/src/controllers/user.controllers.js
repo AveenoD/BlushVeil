@@ -145,7 +145,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
                 email
             }
         },
-        { returnDocument: 'after' }
+        {new: true}
     ).select("-password")
     return res
         .status(200)
@@ -179,30 +179,28 @@ const updatePassword = asyncHandler(async (req, res) => {
 })
 
 const updateUserAddress = asyncHandler(async(req, res) =>{
-
     const {street, city, state, pincode, country} = req.body
-    if([street, city, state, pincode, country].some(field => field.trim()===""))
-    {
-        throw new ApiError(400, "All fields are required");
-    }
 
     const updatedFields = {}
+    if(street) updatedFields["address.street"] = street
+    if(city) updatedFields["address.city"] = city
+    if(state) updatedFields["address.state"] = state
+    if(pincode) updatedFields["address.pincode"] = pincode
+    if(country) updatedFields["address.country"] = country
 
-    if(street) updatedFields.street = street
-    if(city) updatedFields.city = city
-    if(state) updatedFields.state = state
-    if(pincode) updatedFields.pincode = pincode
-    if(country) updatedFields.country = country
+    if(Object.keys(updatedFields).length === 0){
+        throw new ApiError(400, "No fields to update")
+    }
 
     const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { $set: { address: updatedFields } },  
-    { returnDocument: 'after' }                         
-).select("-password")  
+        req.user._id,
+        { $set: updatedFields },
+        { new: true }
+    ).select("-password")
 
-return res
-    .status(200)
-    .json(new ApiResponse(200, user, "Address updated successfully"))
+    return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Address updated successfully"))
 })
 
 export {

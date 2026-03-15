@@ -8,7 +8,7 @@ const ProfilePage = () => {
     const { user, setUser } = useAuth()
     const navigate = useNavigate()
 
-    const [editSection, setEditSection] = useState(null) // 'profile' | 'address' | 'password'
+    const [editSection, setEditSection] = useState(null)
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
@@ -40,7 +40,6 @@ const ProfilePage = () => {
     const openEdit = (section) => {
         setError('')
         setSuccess('')
-        // Reset forms to current user data
         if (section === 'profile') {
             setProfileForm({ fullName: user?.fullName || '', email: user?.email || '' })
         }
@@ -59,12 +58,23 @@ const ProfilePage = () => {
         setEditSection(section)
     }
 
+    // ✅ Profile — sirf changed fields send karo
     const handleProfileUpdate = async (e) => {
         e.preventDefault()
         setLoading(true)
         setError('')
         try {
-            const res = await api.patch('/users/update-profile', profileForm)
+            const changedFields = {}
+            if (profileForm.fullName !== (user?.fullName || '')) changedFields.fullName = profileForm.fullName
+            if (profileForm.email !== (user?.email || '')) changedFields.email = profileForm.email
+
+            if (Object.keys(changedFields).length === 0) {
+                showSuccess('Nothing to update!')
+                setEditSection(null)
+                return
+            }
+
+            const res = await api.patch('/users/update-profile', changedFields)
             setUser(res.data.data)
             setEditSection(null)
             showSuccess('Profile updated successfully!')
@@ -75,33 +85,71 @@ const ProfilePage = () => {
         }
     }
 
+  
+    // const handleAddressUpdate = async (e) => {
+    //     e.preventDefault()
+    //     setLoading(true)
+    //     setError('')
+    //     try {
+    //         const changedFields = {}
+    //         if (addressForm.street !== (user?.address?.street || '')) changedFields.street = addressForm.street
+    //         if (addressForm.city !== (user?.address?.city || '')) changedFields.city = addressForm.city
+    //         if (addressForm.state !== (user?.address?.state || '')) changedFields.state = addressForm.state
+    //         if (addressForm.pincode !== (user?.address?.pincode || '')) changedFields.pincode = addressForm.pincode
+    //         if (addressForm.country !== (user?.address?.country || '')) changedFields.country = addressForm.country
+
+    //         if (Object.keys(changedFields).length === 0) {
+    //             showSuccess('Nothing to update!')
+    //             setEditSection(null)
+    //             return
+    //         }
+
+    //         const res = await api.patch('/users/update-address', changedFields)
+    //         console.log('Response:', res.data)
+    //         setUser(res.data.data)
+    //         setEditSection(null)
+    //         showSuccess('Address updated successfully!')
+    //     } catch (err) {
+    //         setError(err.response?.data?.message || 'Address update failed')
+    //     } finally {
+    //         setLoading(false)
+    //     }
+    // }
     const handleAddressUpdate = async (e) => {
-        e.preventDefault()
-        setLoading(true)
-        setError('')
-        try {
-            const res = await api.patch('/users/update-address', addressForm)
-            setUser(res.data.data)
-            setEditSection(null)
-            showSuccess('Address updated successfully!')
-        } catch (err) {
-            setError(err.response?.data?.message || 'Address update failed')
-        } finally {
-            setLoading(false)
-        }
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+        // Seedha sab fields bhejo — backend handle karega
+        const res = await api.patch('/users/update-address', addressForm)
+        setUser(res.data.data)
+        setEditSection(null)
+        showSuccess('Address updated successfully!')
+    } catch (err) {
+    console.log("Full error object:", err);
+    console.log("Response?", err.response);
+    console.log("Data?", err.response?.data);
+    console.log("Message?", err.response?.data?.message);
+    setError(err.response?.data?.message || 'Address update failed');
+} finally {
+        setLoading(false)
     }
+}
 
     const handlePasswordUpdate = async (e) => {
         e.preventDefault()
         setLoading(true)
         setError('')
         try {
+            if (!passwordForm.oldPassword || !passwordForm.newPassword) {
+                throw new Error('Both fields are required')
+            }
             await api.patch('/users/update-password', passwordForm)
             setEditSection(null)
             setPasswordForm({ oldPassword: '', newPassword: '' })
             showSuccess('Password changed successfully!')
         } catch (err) {
-            setError(err.response?.data?.message || 'Password update failed')
+            setError(err.response?.data?.message || err.message || 'Password update failed')
         } finally {
             setLoading(false)
         }
@@ -120,7 +168,6 @@ const ProfilePage = () => {
 
             <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-4">
 
-                {/* Success / Error */}
                 {success && (
                     <div className="flex items-center gap-2 bg-green-50 text-green-600 text-sm px-4 py-3 rounded-xl">
                         <Check size={15} /> {success}
@@ -163,7 +210,6 @@ const ProfilePage = () => {
                         )}
                     </div>
 
-                    {/* View Mode */}
                     {editSection !== 'profile' && (
                         <div className="px-6 py-4 flex flex-col gap-3">
                             <div className="flex justify-between items-center">
@@ -181,7 +227,6 @@ const ProfilePage = () => {
                         </div>
                     )}
 
-                    {/* Edit Mode */}
                     {editSection === 'profile' && (
                         <form onSubmit={handleProfileUpdate} className="px-6 py-4 flex flex-col gap-4">
                             <div>
@@ -221,7 +266,6 @@ const ProfilePage = () => {
                         )}
                     </div>
 
-                    {/* View Mode */}
                     {editSection !== 'address' && (
                         <div className="px-6 py-4 flex flex-col gap-3">
                             {user?.address?.street ? (
@@ -253,7 +297,6 @@ const ProfilePage = () => {
                         </div>
                     )}
 
-                    {/* Edit Mode */}
                     {editSection === 'address' && (
                         <form onSubmit={handleAddressUpdate} className="px-6 py-4 flex flex-col gap-4">
                             <div>
@@ -349,7 +392,6 @@ const ProfilePage = () => {
                         </form>
                     )}
                 </div>
-
             </div>
         </div>
     )

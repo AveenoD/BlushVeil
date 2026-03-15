@@ -4,7 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { isValidObjectId } from "mongoose";
 import { User } from '../models/user.models.js'
 import { Order } from '../models/order.models.js'
-
+import { Dress } from '../models/dress.models.js'
 
 const placeOrder = asyncHandler(async (req, res) => {
     const { items, totalAmount } = req.body
@@ -37,6 +37,12 @@ const placeOrder = asyncHandler(async (req, res) => {
         },
         whatsappSent: true
     })
+    for (const item of items) {
+    await Dress.findByIdAndUpdate(
+        item.dress,
+        { $inc: { stock: -item.quantity } }
+    )
+}
 
     return res
         .status(201)
