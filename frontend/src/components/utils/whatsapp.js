@@ -1,6 +1,6 @@
-const ADMIN_WHATSAPP = '919999999999' // ← sirf ek jagah
+const ADMIN_WHATSAPP = '918080161421'
 
-export const sendWhatsAppOrder = async (api, order, cartItems, user, totalAmount) => {
+export const buildWhatsAppMessage  = async (api, order, cartItems, user, totalAmount) => {
    let message = `*BLUSHVEIL — NEW ORDER*\n`
             message += `━━━━━━━━━━━━━━━━━━\n`
             message += `*Order ID:* ${order.orderNumber}\n`
