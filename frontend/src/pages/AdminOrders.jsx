@@ -7,7 +7,6 @@ const STATUSES = [
     { value: 'pending',          label: 'Pending' },
     { value: 'confirmed',        label: 'Confirmed' },
     { value: 'dispatched',       label: 'Dispatched' },
-    { value: 'out_for_delivery', label: 'Out for Delivery' },
     { value: 'delivered',        label: 'Delivered' },
     { value: 'cancelled',        label: 'Cancelled' },
 ]
@@ -16,7 +15,6 @@ const STATUS_CONFIG = {
     pending:          { color: 'text-yellow-500', bg: 'bg-yellow-50' },
     confirmed:        { color: 'text-blue-500',   bg: 'bg-blue-50' },
     dispatched:       { color: 'text-purple-500', bg: 'bg-purple-50' },
-    out_for_delivery: { color: 'text-orange-500', bg: 'bg-orange-50' },
     delivered:        { color: 'text-green-500',  bg: 'bg-green-50' },
     cancelled:        { color: 'text-red-500',    bg: 'bg-red-50' },
 }
