@@ -82,7 +82,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
             message += `Phone: ${user.phoneNumber}\n`
 
             message += `\n━━━━━━━━━━━━━━━━━━\n`
-            message += `Thank you for shopping with *BlushVeil* 💗`
+            message += `Thank you for shopping with *BlushVeil* ❤️`
 
             // Clear cart
             clearCart()
