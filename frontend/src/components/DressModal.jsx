@@ -4,8 +4,7 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
-
-const ADMIN_WHATSAPP = '919999999999' // ← apna number daalo
+import { buildWhatsAppMessage, openWhatsApp } from '../utils/whatsapp'
 
 const DressModal = ({ dress, onClose }) => {
     const { addToCart, cartItems, updateQuantity } = useCart()
@@ -30,11 +29,10 @@ const DressModal = ({ dress, onClose }) => {
 
     if (!dress) return null
 
-    const cartItem = cartItems.find(
-        item =>
-            item.dress._id === dress._id &&
-            item.selectedSize === selectedSize &&
-            item.selectedColor === selectedColor
+    const cartItem = cartItems.find(item =>
+        item.dress._id === dress._id &&
+        item.selectedSize === selectedSize &&
+        item.selectedColor === selectedColor
     )
     const isInCart = !!cartItem
 
@@ -52,48 +50,19 @@ const DressModal = ({ dress, onClose }) => {
 
     const handleBuyNow = async () => {
         if (!validateSelection()) return
-
         const { street, city, state, pincode } = user.address || {}
         if (!street || !city || !state || !pincode) {
             alert('Please add your delivery address first!')
-            navigate('/profile')
-            onClose()
-            return
+            navigate('/profile'); onClose(); return
         }
 
         setBuyingNow(true)
         try {
-            const items = [{
-                dress: dress._id,
-                name: dress.name,
-                image: dress.image?.url,
-                price: dress.price,
-                size: selectedSize,
-                color: selectedColor || 'N/A',
-                quantity: 1
-            }]
-
-            const res = await api.post('/orders/place', {
-                items,
-                totalAmount: dress.price
-            })
-            const order = res.data.data
-
-            let message = `🛍️ *New Order — BlushVeil*\n`
-            message += `Order No: *${order.orderNumber}*\n\n`
-            message += `*1. ${dress.name}*\n`
-            message += `   Size: ${selectedSize} | Color: ${selectedColor || 'N/A'} | Qty: 1\n`
-            message += `   Price: ₹${dress.price}\n\n`
-            message += `💰 *Total: ₹${dress.price}*\n\n`
-            message += `📦 *Delivery Address:*\n`
-            message += `${user.address.street}, ${user.address.city}\n`
-            message += `${user.address.state} - ${user.address.pincode}\n`
-            message += `${user.address.country || ''}\n\n`
-            message += `👤 *Customer:*\n`
-            message += `${user.fullName} | ${user.phoneNumber}`
-
+            const items = [{ dress: dress._id, name: dress.name, image: dress.image?.url, price: dress.price, size: selectedSize, color: selectedColor || 'N/A', quantity: 1 }]
+            const res = await api.post('/orders/place', { items, totalAmount: dress.price })
+            const message = buildWhatsAppMessage(res.data.data, items, user, dress.price)
             onClose()
-            window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`, '_blank')
+            openWhatsApp(message)
         } catch (err) {
             alert(err.response?.data?.message || 'Something went wrong')
         } finally {
@@ -102,14 +71,9 @@ const DressModal = ({ dress, onClose }) => {
     }
 
     return (
-        <div
-            className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
-            onClick={onClose}
-        >
-            <div
-                className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex" onClick={(e) => e.stopPropagation()}>
+
                 {/* Image */}
                 <div className="w-1/2 bg-gray-100 shrink-0">
                     <img src={dress.image?.url} alt={dress.name} className="w-full h-full object-cover" />
@@ -130,21 +94,19 @@ const DressModal = ({ dress, onClose }) => {
                     <p className="text-3xl font-semibold text-gray-900 mb-3">₹{dress.price}</p>
                     <p className="text-sm text-gray-500 leading-relaxed mb-4">{dress.description}</p>
 
-                    {/* Stock */}
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-5">
                         <span className={`w-2 h-2 rounded-full ${dress.stock > 0 ? 'bg-green-400' : 'bg-red-400'}`} />
                         {dress.stock > 0 ? `${dress.stock} in stock` : 'Out of stock'}
                     </div>
 
-                    {/* Size Selector */}
+                    {/* Size */}
                     {dress.sizes?.length > 0 && (
                         <div className="mb-4">
                             <p className="text-xs font-medium text-gray-500 mb-2">SIZE</p>
                             <div className="flex gap-2 flex-wrap">
                                 {dress.sizes.map(size => (
                                     <button key={size} onClick={() => setSelectedSize(size)}
-                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors
-                                            ${selectedSize === size ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
+                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedSize === size ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                                         {size}
                                     </button>
                                 ))}
@@ -152,15 +114,14 @@ const DressModal = ({ dress, onClose }) => {
                         </div>
                     )}
 
-                    {/* Color Selector */}
+                    {/* Color */}
                     {dress.colors?.length > 0 && (
                         <div className="mb-5">
                             <p className="text-xs font-medium text-gray-500 mb-2">COLOR — {selectedColor}</p>
                             <div className="flex gap-2 flex-wrap">
                                 {dress.colors.map(color => (
                                     <button key={color} onClick={() => setSelectedColor(color)}
-                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors
-                                            ${selectedColor === color ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
+                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedColor === color ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                                         {color}
                                     </button>
                                 ))}
@@ -168,18 +129,15 @@ const DressModal = ({ dress, onClose }) => {
                         </div>
                     )}
 
-                    {/* Cart Controls */}
+                    {/* Buttons */}
                     <div className="mt-auto pt-2 flex flex-col gap-2">
                         {dress.stock === 0 ? (
-                            <button disabled className="w-full py-3 rounded-full text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed">
-                                Out of Stock
-                            </button>
+                            <button disabled className="w-full py-3 rounded-full text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed">Out of Stock</button>
                         ) : isInCart ? (
                             <>
-                                {/* Quantity Controls */}
                                 <div className="flex items-center justify-between bg-gray-50 rounded-full px-4 py-2">
                                     <button onClick={() => updateQuantity(dress._id, selectedSize, selectedColor, cartItem.quantity - 1)}
-                                        className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors">
+                                        className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
                                         {cartItem.quantity === 1 ? <Trash2 size={13} /> : <Minus size={13} />}
                                     </button>
                                     <span className="text-sm font-semibold text-gray-900">{cartItem.quantity} in cart</span>
@@ -188,7 +146,6 @@ const DressModal = ({ dress, onClose }) => {
                                         <Plus size={13} />
                                     </button>
                                 </div>
-                                {/* Buy Now still available */}
                                 <button onClick={handleBuyNow} disabled={buyingNow}
                                     className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50">
                                     <MessageCircle size={15} />
@@ -197,13 +154,11 @@ const DressModal = ({ dress, onClose }) => {
                             </>
                         ) : (
                             <>
-                                {/* Add to Cart */}
                                 <button onClick={handleAddToCart}
                                     className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium bg-black text-white hover:bg-gray-800 transition-colors">
                                     <ShoppingBag size={15} />
                                     Add to Cart
                                 </button>
-                                {/* Buy Now */}
                                 <button onClick={handleBuyNow} disabled={buyingNow}
                                     className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-medium border border-green-500 text-green-600 hover:bg-green-50 transition-colors disabled:opacity-50">
                                     <MessageCircle size={15} />

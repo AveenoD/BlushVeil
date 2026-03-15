@@ -4,8 +4,7 @@ import { ArrowLeft, Plus, Minus, ShoppingBag, Trash2, MessageCircle } from 'luci
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
-
-const ADMIN_WHATSAPP = '919999999999' // ← apna number daalo
+import { buildWhatsAppMessage, openWhatsApp } from '../utils/whatsapp'
 
 const ProductPage = () => {
     const { id } = useParams()
@@ -35,11 +34,10 @@ const ProductPage = () => {
         fetchDress()
     }, [id])
 
-    const cartItem = dress ? cartItems.find(
-        item =>
-            item.dress._id === dress._id &&
-            item.selectedSize === selectedSize &&
-            item.selectedColor === selectedColor
+    const cartItem = dress ? cartItems.find(item =>
+        item.dress._id === dress._id &&
+        item.selectedSize === selectedSize &&
+        item.selectedColor === selectedColor
     ) : null
     const isInCart = !!cartItem
 
@@ -57,46 +55,18 @@ const ProductPage = () => {
 
     const handleBuyNow = async () => {
         if (!validateSelection()) return
-
         const { street, city, state, pincode } = user.address || {}
         if (!street || !city || !state || !pincode) {
             alert('Please add your delivery address first!')
-            navigate('/profile')
-            return
+            navigate('/profile'); return
         }
 
         setBuyingNow(true)
         try {
-            const items = [{
-                dress: dress._id,
-                name: dress.name,
-                image: dress.image?.url,
-                price: dress.price,
-                size: selectedSize,
-                color: selectedColor || 'N/A',
-                quantity: 1
-            }]
-
-            const res = await api.post('/orders/place', {
-                items,
-                totalAmount: dress.price
-            })
-            const order = res.data.data
-
-            let message = `🛍️ *New Order — BlushVeil*\n`
-            message += `Order No: *${order.orderNumber}*\n\n`
-            message += `*1. ${dress.name}*\n`
-            message += `   Size: ${selectedSize} | Color: ${selectedColor || 'N/A'} | Qty: 1\n`
-            message += `   Price: ₹${dress.price}\n\n`
-            message += `💰 *Total: ₹${dress.price}*\n\n`
-            message += `📦 *Delivery Address:*\n`
-            message += `${user.address.street}, ${user.address.city}\n`
-            message += `${user.address.state} - ${user.address.pincode}\n`
-            message += `${user.address.country || ''}\n\n`
-            message += `👤 *Customer:*\n`
-            message += `${user.fullName} | ${user.phoneNumber}`
-
-            window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`, '_blank')
+            const items = [{ dress: dress._id, name: dress.name, image: dress.image?.url, price: dress.price, size: selectedSize, color: selectedColor || 'N/A', quantity: 1 }]
+            const res = await api.post('/orders/place', { items, totalAmount: dress.price })
+            const message = buildWhatsAppMessage(res.data.data, items, user, dress.price)
+            openWhatsApp(message)
         } catch (err) {
             alert(err.response?.data?.message || 'Something went wrong')
         } finally {
@@ -115,32 +85,25 @@ const ProductPage = () => {
     )
 
     if (!dress) return (
-        <div className="min-h-screen flex items-center justify-center text-gray-400">
-            Dress not found
-        </div>
+        <div className="min-h-screen flex items-center justify-center text-gray-400">Dress not found</div>
     )
 
     return (
         <div className="min-h-screen bg-white pb-36">
 
-            {/* Back Button */}
-            <button onClick={() => navigate(-1)}
-                className="absolute top-4 left-4 z-10 p-2 bg-white rounded-full shadow-sm">
+            <button onClick={() => navigate(-1)} className="absolute top-4 left-4 z-10 p-2 bg-white rounded-full shadow-sm">
                 <ArrowLeft size={18} />
             </button>
 
-            {/* Image */}
             <div className="w-full aspect-square bg-gray-100">
                 <img src={dress.image?.url} alt={dress.name} className="w-full h-full object-cover" />
             </div>
 
-            {/* Details */}
             <div className="px-5 py-6">
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-widest">{dress.category}</span>
                 <h1 className="text-xl font-semibold text-gray-900 mt-1">{dress.name}</h1>
                 <p className="text-2xl font-semibold text-gray-900 mt-2">₹{dress.price}</p>
 
-                {/* Stock */}
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
                     <span className={`w-2 h-2 rounded-full ${dress.stock > 0 ? 'bg-green-400' : 'bg-red-400'}`} />
                     {dress.stock > 0 ? `${dress.stock} in stock` : 'Out of stock'}
@@ -148,17 +111,14 @@ const ProductPage = () => {
 
                 <p className="text-sm text-gray-500 leading-relaxed mt-4">{dress.description}</p>
 
-                {/* Size Selector */}
+                {/* Size */}
                 {dress.sizes?.length > 0 && (
                     <div className="mt-5">
                         <p className="text-xs font-medium text-gray-500 mb-2">SIZE</p>
                         <div className="flex gap-2 flex-wrap">
                             {dress.sizes.map(size => (
                                 <button key={size} onClick={() => setSelectedSize(size)}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors
-                                        ${selectedSize === size
-                                            ? 'bg-black text-white border-black'
-                                            : 'border-gray-200 text-gray-600'}`}>
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedSize === size ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-600'}`}>
                                     {size}
                                 </button>
                             ))}
@@ -166,17 +126,14 @@ const ProductPage = () => {
                     </div>
                 )}
 
-                {/* Color Selector */}
+                {/* Color */}
                 {dress.colors?.length > 0 && (
                     <div className="mt-5">
                         <p className="text-xs font-medium text-gray-500 mb-2">COLOR — {selectedColor}</p>
                         <div className="flex gap-2 flex-wrap">
                             {dress.colors.map(color => (
                                 <button key={color} onClick={() => setSelectedColor(color)}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors
-                                        ${selectedColor === color
-                                            ? 'bg-black text-white border-black'
-                                            : 'border-gray-200 text-gray-600'}`}>
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedColor === color ? 'bg-black text-white border-black' : 'border-gray-200 text-gray-600'}`}>
                                     {color}
                                 </button>
                             ))}
@@ -185,30 +142,23 @@ const ProductPage = () => {
                 )}
             </div>
 
-            {/* Fixed Bottom Buttons */}
+            {/* Fixed Bottom */}
             <div className="fixed bottom-0 left-0 right-0 px-4 py-3 bg-white border-t border-gray-100">
                 {dress.stock === 0 ? (
-                    <button disabled
-                        className="w-full py-4 rounded-full text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed">
-                        Out of Stock
-                    </button>
+                    <button disabled className="w-full py-4 rounded-full text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed">Out of Stock</button>
                 ) : isInCart ? (
                     <div className="flex flex-col gap-2">
-                        {/* Quantity Controls */}
                         <div className="flex items-center justify-between bg-gray-50 rounded-full px-5 py-3">
-                            <button
-                                onClick={() => updateQuantity(dress._id, selectedSize, selectedColor, cartItem.quantity - 1)}
+                            <button onClick={() => updateQuantity(dress._id, selectedSize, selectedColor, cartItem.quantity - 1)}
                                 className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
                                 {cartItem.quantity === 1 ? <Trash2 size={14} /> : <Minus size={14} />}
                             </button>
                             <span className="text-sm font-semibold text-gray-900">{cartItem.quantity} in cart</span>
-                            <button
-                                onClick={() => updateQuantity(dress._id, selectedSize, selectedColor, cartItem.quantity + 1)}
+                            <button onClick={() => updateQuantity(dress._id, selectedSize, selectedColor, cartItem.quantity + 1)}
                                 className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors">
                                 <Plus size={14} />
                             </button>
                         </div>
-                        {/* Buy Now */}
                         <button onClick={handleBuyNow} disabled={buyingNow}
                             className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-medium bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50">
                             <MessageCircle size={16} />
@@ -217,13 +167,11 @@ const ProductPage = () => {
                     </div>
                 ) : (
                     <div className="flex gap-2">
-                        {/* Add to Cart */}
                         <button onClick={handleAddToCart}
                             className="flex-1 flex items-center justify-center gap-2 py-4 rounded-full text-sm font-medium bg-black text-white hover:bg-gray-800 transition-colors">
                             <ShoppingBag size={16} />
                             Add to Cart
                         </button>
-                        {/* Buy Now */}
                         <button onClick={handleBuyNow} disabled={buyingNow}
                             className="flex-1 flex items-center justify-center gap-2 py-4 rounded-full text-sm font-medium bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50">
                             <MessageCircle size={16} />
