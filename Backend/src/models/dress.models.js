@@ -20,12 +20,12 @@ const dressSchema = new Schema({
         type: String,
         enum: ["Casual", "Formal", "Party", "Nighty", "Undergarment"],
         required: true,
-        default:"Casual"
+        default: "Casual"
     },
     image: {
         url: String,
         public_id: String,
-        
+
     },
     stock: {
         type: Number,
@@ -35,7 +35,16 @@ const dressSchema = new Schema({
     isAvailable: {
         type: Boolean,
         default: true
-    }
+    },
+    sizes: {
+        type: [String],
+        enum: ["XS", "S", "M", "L", "XL", "XXL"],
+        default: ["S", "M", "L", "XL"]
+    },
+    colors: {
+        type: [String],
+        default: []
+    },
 
 
 

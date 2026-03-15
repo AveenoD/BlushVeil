@@ -8,10 +8,11 @@ import { isValidObjectId } from "mongoose";
 
 
 const addDress = asyncHandler(async (req, res) => {
-    const { name, description, price, category, stock } = req.body
-    console.log("File received:", req.file)
-    console.log("Body received:", req.body)
+    const { name, description, price, category, stock, sizes, colors } = req.body
+    if(!sizes || !colors) throw new ApiError(400, "Please select color and size");
 
+    const parsedSizes = sizes ? JSON.parse(sizes) : ["S", "M", "L", "XL"]
+    const parsedColors = colors ? JSON.parse(colors) : []
     if ([name, description, category].some(field => field.trim() === "")) {
         throw new ApiError(400, "All the fields are required")
     }
@@ -24,8 +25,8 @@ const addDress = asyncHandler(async (req, res) => {
     const dressImage = await uploadOnCloudinary(dressImageLocalPath)
 
     if (!dressImage || !dressImage.url) {
-    throw new ApiError(400, "Error while uploading Image")
-}
+        throw new ApiError(400, "Error while uploading Image")
+    }
 
     const createdDress = await Dress.create({
         name,
@@ -33,6 +34,8 @@ const addDress = asyncHandler(async (req, res) => {
         price,
         category,
         stock,
+        sizes: parsedSizes,
+        colors: parsedColors,
         image: {
             url: dressImage.url,
             public_id: dressImage.public_id
@@ -56,7 +59,7 @@ const addDress = asyncHandler(async (req, res) => {
 
 const updateDress = asyncHandler(async (req, res) => {
     const { dressId } = req.params;
-    const { name, description, price, category, stock } = req.body;
+    const { name, description, price, category, stock, sizes, colors } = req.body
     const dressImageLocalPath = req.file?.path;
     if (!isValidObjectId(dressId)) {
         throw new ApiError(400, "Invalid dress Id")
@@ -87,6 +90,8 @@ const updateDress = asyncHandler(async (req, res) => {
     if (price) updatedFields.price = price;
     if (category) updatedFields.category = category;
     if (stock) updatedFields.stock = stock;
+    if (sizes) updatedFields.sizes = JSON.parse(sizes);
+    if (colors) updatedFields.colors = JSON.parse(colors);
 
 
 
@@ -103,8 +108,8 @@ const updateDress = asyncHandler(async (req, res) => {
     )
 
     return res
-    .status(200)
-    .json(new ApiResponse(200, updatedDress, "Dress updated successfully"))
+        .status(200)
+        .json(new ApiResponse(200, updatedDress, "Dress updated successfully"))
 
 })
 
@@ -151,7 +156,7 @@ const getDressById = asyncHandler(async (req, res) => {
 const getAllDresses = asyncHandler(async (req, res) => {
     const { category, search } = req.query
     const filter = {}
-     if (category && category !== 'All') {
+    if (category && category !== 'All') {
         filter.category = category
     }
 

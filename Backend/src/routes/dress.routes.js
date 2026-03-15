@@ -8,7 +8,7 @@ import {
     updateDress,
     getDressById,
     getAllDresses
-} from '../controllers/dress.controller.js'
+} from '../controllers/dress.controllers.js'
 
 const router = Router();
 

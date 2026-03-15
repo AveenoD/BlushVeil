@@ -31,4 +31,6 @@ app.use("/api/v1/users", userRouter)
 import dressRouter from './routes/dress.routes.js'
 app.use("/api/v1/dresses", dressRouter)
 
+import orderRouter from './routes/order.routes.js'
+app.use('/api/v1/orders', orderRouter)
 export { app }
