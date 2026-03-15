@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 import { buildWhatsAppMessage, openWhatsApp } from '../components/utils/whatsapp.js'
-
+//This is a comment just to update the repo and trigger the pipeline. Please ignore.
 const ProductPage = () => {
     const { id } = useParams()
     const navigate = useNavigate()
