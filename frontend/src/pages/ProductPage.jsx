@@ -4,7 +4,7 @@ import { ArrowLeft, Plus, Minus, ShoppingBag, Trash2, MessageCircle } from 'luci
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
-import { buildWhatsAppMessage, openWhatsApp } from '../utils/whatsapp'
+import { buildWhatsAppMessage, openWhatsApp } from '../components/utils/whatsapp.js'
 
 const ProductPage = () => {
     const { id } = useParams()

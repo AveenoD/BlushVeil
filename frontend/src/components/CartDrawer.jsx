@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import api from '../api/axios'
-import { buildWhatsAppMessage, openWhatsApp } from '../utils/whatsapp'
+import { buildWhatsAppMessage, openWhatsApp } from '../components/utils/whatsapp.js'
 
 const CartDrawer = ({ isOpen, onClose }) => {
     const { cartItems, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems } = useCart()

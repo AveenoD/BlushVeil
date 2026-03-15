@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
-import { buildWhatsAppMessage, openWhatsApp } from '../utils/whatsapp'
+import { buildWhatsAppMessage, openWhatsApp } from '../components/utils/whatsapp.js'
 
 const DressModal = ({ dress, onClose }) => {
     const { addToCart, cartItems, updateQuantity } = useCart()
