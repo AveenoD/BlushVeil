@@ -41,5 +41,5 @@ export const buildWhatsAppMessage = (order, items, user, totalAmount) => {
 }
 
 export const openWhatsApp = (message) => {
-    window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`, '_blank')
+    window.location.href = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`;
 }

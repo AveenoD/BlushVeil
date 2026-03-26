@@ -35,11 +35,16 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
             const res = await api.post('/orders/place', { items, totalAmount })
             const order = res.data.data
-            const message = buildWhatsAppMessage(order, cartItems, user, totalAmount)
+
+            // ✅ FIX HERE
+            const message = buildWhatsAppMessage(order, items, user, totalAmount)
 
             clearCart()
             onClose()
-            openWhatsApp(message)
+
+            // ✅ iPhone FIX
+            window.location.href = `https://wa.me/918080161421?text=${encodeURIComponent(message)}`
+
         } catch (err) {
             alert(err.response?.data?.message || 'Something went wrong')
         } finally {
