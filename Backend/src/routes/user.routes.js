@@ -7,7 +7,9 @@ import {
     getUserProfile,
     updateUserProfile,
     updatePassword,
-    updateUserAddress
+    updateUserAddress,
+    // ADDED: import for new verifyEmail controller
+    verifyEmail
 } from '../controllers/user.controllers.js'
 const router = Router();
 
@@ -19,5 +21,7 @@ router.route('/update-profile').patch(verifyJWT, updateUserProfile)
 router.route('/update-password').patch(verifyJWT,updatePassword)
 router.route('/update-address').patch(verifyJWT,updateUserAddress)
 
-export default router;
+// ADDED: new route for email verification (token-based, GET)
+router.route('/verify-email/:token').get(verifyEmail)
 
+export default router;

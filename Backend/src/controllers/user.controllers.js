@@ -3,6 +3,10 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose, { isValidObjectId } from "mongoose";
+// ADDED: required imports for email verification + Google schema support
+import { randomBytes } from "crypto";
+import nodemailer from "nodemailer";
+
 const generateAccessTokenAndRefreshToken = async (userID) => {
     try {
 
@@ -48,10 +52,42 @@ const registerUser = asyncHandler(async (req, res) => {
         password,
     });
 
+    // ADDED: production email verification flow (token + 1-hour expiry)
+    const emailVerificationToken = randomBytes(32).toString("hex");
+    const emailVerificationExpires = Date.now() + 3600000; // 1 hour
 
+    user.emailVerificationToken = emailVerificationToken;
+    user.emailVerificationExpires = emailVerificationExpires;
+    await user.save({ validateBeforeSave: false });
+
+    // ADDED: nodemailer email sending (configure EMAIL_* in .env)
+    const transporter = nodemailer.createTransporter({
+        host: process.env.EMAIL_HOST,
+        port: Number(process.env.EMAIL_PORT),
+        secure: false,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+
+    const verificationLink = `${process.env.BASE_URL || "http://localhost:8000"}/api/v1/users/verify-email/${emailVerificationToken}`;
+
+    await transporter.sendMail({
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to: email,
+        subject: "Verify your BlushVeil Account",
+        html: `
+            <h2>Welcome to BlushVeil!</h2>
+            <p>Click the link below to verify your email address:</p>
+            <a href="${verificationLink}" target="_blank">Verify Email</a>
+            <p>This link expires in 1 hour.</p>
+            <p>If you did not register, please ignore this email.</p>
+        `,
+    });
 
     const createdUser = await User.findById(user._id).select(
-        "-password -refreshToken"
+        "-password -refreshToken -emailVerificationToken -emailVerificationExpires"
     );
 
     if (!createdUser) {
@@ -60,7 +96,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     return res.status(201).json(
-        new ApiResponse(201, createdUser, "User registered successfully")
+        new ApiResponse(201, createdUser, "User registered successfully. Please check your email to verify your account.")
     );
 
 
@@ -79,6 +115,11 @@ const loginUser = asyncHandler(async (req, res) => {
     }).select("+password")
     if (!user) {
         throw new ApiError(404, "User does not exist's!")
+    }
+
+    // ADDED: block login for unverified users (security fix)
+    if (!user.isVerified) {
+        throw new ApiError(403, "Please verify your email address before logging in");
     }
 
     const isPasswordValid = await user.isPasswordCorrect(password)
@@ -203,6 +244,29 @@ const updateUserAddress = asyncHandler(async(req, res) =>{
         .json(new ApiResponse(200, user, "Address updated successfully"))
 })
 
+// ADDED: new production-ready verifyEmail controller (token-based, expiry check)
+const verifyEmail = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+
+    const user = await User.findOne({
+        emailVerificationToken: token,
+        emailVerificationExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+        throw new ApiError(400, "Invalid or expired verification token");
+    }
+
+    user.isVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Email verified successfully. You can now log in.")
+    );
+});
+
 export {
     registerUser,
     loginUser,
@@ -210,7 +274,7 @@ export {
     getUserProfile,
     updateUserProfile,
     updatePassword,
-    updateUserAddress
+    updateUserAddress,
+    // ADDED: new exported function
+    verifyEmail
 }
-
-

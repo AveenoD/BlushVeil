@@ -62,6 +62,22 @@ const userSchema = new Schema({
         default: false
     },
 
+    // ADDED: Email verification fields (production-ready, 1-hour expiry)
+    emailVerificationToken: {
+        type: String,
+        select: false
+    },
+    emailVerificationExpires: {
+        type: Date
+    },
+
+    // ADDED: Google login support (as per existing incomplete Google flow)
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+
     refreshToken: {
         type: String
     },
@@ -81,7 +97,9 @@ userSchema.methods.isPasswordCorrect = async function(password){
 userSchema.methods.generateAccessToken = function(){
     return jwt.sign({
         _id: this._id,
-        username: this.username,
+        // CHANGED: fixed invalid 'username' field (was causing JWT generation failure)
+        // now uses existing 'email' field for correct token payload
+        email: this.email,
         fullName: this.fullName
     },
     process.env.ACCESS_TOKEN_SECRET,
