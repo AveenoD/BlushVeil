@@ -14,14 +14,13 @@ const Login = () => {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
 
-
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
         setLoading(true)
         try {
             const res = await api.post('/users/login', form)
-            login(res.data.data.user, res.data.data.accessToken)
+            login(res.data.data.user) // ✅ accessToken param removed — cookie handles it
             navigate('/')
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed')
@@ -34,7 +33,6 @@ const Login = () => {
         <div className="min-h-screen bg-white flex items-center justify-center px-4">
             <div className="w-full max-w-sm">
 
-                {/* Logo */}
                 <h1 className="text-2xl font-semibold text-center mb-1 font-serif">BlushVeil</h1>
                 <p className="text-sm text-gray-400 text-center mb-8">Sign in to your account</p>
 

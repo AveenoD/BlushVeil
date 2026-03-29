@@ -66,6 +66,14 @@ const userSchema = new Schema({
     refreshToken: {
         type: String
     },
+    emailVerificationToken: {
+        type: String,
+        select: false
+    },
+    emailVerificationExpires: {
+        type: Date,
+        select: false
+    }
 },{ timestamps: true });
 
 userSchema.pre('save', async function () {
