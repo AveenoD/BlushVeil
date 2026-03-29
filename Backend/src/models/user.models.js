@@ -1,6 +1,7 @@
 import mongoose,{Schema} from "mongoose";
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+
 const userSchema = new Schema({
     fullName:{
         type: String,
@@ -62,22 +63,6 @@ const userSchema = new Schema({
         default: false
     },
 
-    // ADDED: Email verification fields (production-ready, 1-hour expiry)
-    emailVerificationToken: {
-        type: String,
-        select: false
-    },
-    emailVerificationExpires: {
-        type: Date
-    },
-
-    // ADDED: Google login support (as per existing incomplete Google flow)
-    googleId: {
-        type: String,
-        unique: true,
-        sparse: true
-    },
-
     refreshToken: {
         type: String
     },
@@ -89,7 +74,6 @@ userSchema.pre('save', async function () {
     this.password = await bcrypt.hash(this.password, 10);
 });
 
-
 userSchema.methods.isPasswordCorrect = async function(password){
     return await bcrypt.compare(password, this.password);
 }
@@ -97,8 +81,7 @@ userSchema.methods.isPasswordCorrect = async function(password){
 userSchema.methods.generateAccessToken = function(){
     return jwt.sign({
         _id: this._id,
-        // CHANGED: fixed invalid 'username' field (was causing JWT generation failure)
-        // now uses existing 'email' field for correct token payload
+        // Fixed: Changed from 'username' to 'email' (this was causing JWT issues)
         email: this.email,
         fullName: this.fullName
     },
@@ -108,10 +91,10 @@ userSchema.methods.generateAccessToken = function(){
     }
 )
 }
+
 userSchema.methods.generateRefereshToken = function(){
     return jwt.sign({
         _id: this._id,
-       
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
@@ -119,6 +102,5 @@ userSchema.methods.generateRefereshToken = function(){
     }
 )
 }
-
 
 export const User = mongoose.model("User", userSchema);

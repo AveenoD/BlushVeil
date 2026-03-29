@@ -3,13 +3,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import mongoose, { isValidObjectId } from "mongoose";
-// ADDED: required imports for email verification + Google schema support
-import { randomBytes } from "crypto";
-import nodemailer from "nodemailer";
 
 const generateAccessTokenAndRefreshToken = async (userID) => {
     try {
-
         const user = await User.findById(userID)
         const accessToken = user.generateAccessToken()
         const refreshToken = user.generateRefereshToken()
@@ -22,10 +18,12 @@ const generateAccessTokenAndRefreshToken = async (userID) => {
         throw new ApiError(500, "Something went wrong while generating Access and Refresh Token!")
     }
 }
+
 const Options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production"
 }
+
 const registerUser = asyncHandler(async (req, res) => {
 
     const { fullName, email, password, phoneNumber } = req.body;
@@ -36,13 +34,12 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are required");
     }
 
-
     const existedUser = await User.findOne({
         $or: [{ email }, { phoneNumber }]
     });
 
     if (existedUser) {
-        throw new ApiError(409, "User with email or username already exists");
+        throw new ApiError(409, "User with email or phone number already exists");
     }
 
     const user = await User.create({
@@ -52,55 +49,17 @@ const registerUser = asyncHandler(async (req, res) => {
         password,
     });
 
-    // ADDED: production email verification flow (token + 1-hour expiry)
-    const emailVerificationToken = randomBytes(32).toString("hex");
-    const emailVerificationExpires = Date.now() + 3600000; // 1 hour
-
-    user.emailVerificationToken = emailVerificationToken;
-    user.emailVerificationExpires = emailVerificationExpires;
-    await user.save({ validateBeforeSave: false });
-
-    // ADDED: nodemailer email sending (configure EMAIL_* in .env)
-    const transporter = nodemailer.createTransporter({
-        host: process.env.EMAIL_HOST,
-        port: Number(process.env.EMAIL_PORT),
-        secure: false,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
-
-    const verificationLink = `${process.env.BASE_URL || "http://localhost:8000"}/api/v1/users/verify-email/${emailVerificationToken}`;
-
-    await transporter.sendMail({
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        to: email,
-        subject: "Verify your BlushVeil Account",
-        html: `
-            <h2>Welcome to BlushVeil!</h2>
-            <p>Click the link below to verify your email address:</p>
-            <a href="${verificationLink}" target="_blank">Verify Email</a>
-            <p>This link expires in 1 hour.</p>
-            <p>If you did not register, please ignore this email.</p>
-        `,
-    });
-
     const createdUser = await User.findById(user._id).select(
-        "-password -refreshToken -emailVerificationToken -emailVerificationExpires"
+        "-password -refreshToken"
     );
 
     if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering user");
     }
 
-
     return res.status(201).json(
-        new ApiResponse(201, createdUser, "User registered successfully. Please check your email to verify your account.")
+        new ApiResponse(201, createdUser, "User registered successfully")
     );
-
-
-
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -113,13 +72,9 @@ const loginUser = asyncHandler(async (req, res) => {
     const user = await User.findOne({
         $or: [{ phoneNumber }, { email }]
     }).select("+password")
-    if (!user) {
-        throw new ApiError(404, "User does not exist's!")
-    }
 
-    // ADDED: block login for unverified users (security fix)
-    if (!user.isVerified) {
-        throw new ApiError(403, "Please verify your email address before logging in");
+    if (!user) {
+        throw new ApiError(404, "User does not exist!")
     }
 
     const isPasswordValid = await user.isPasswordCorrect(password)
@@ -129,6 +84,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id);
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+
     return res
         .status(200)
         .cookie("accessToken", accessToken, Options)
@@ -137,28 +93,22 @@ const loginUser = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
                 {
-                    user: loggedInUser, accessToken, refreshToken
-
+                    user: loggedInUser, 
+                    accessToken, 
+                    refreshToken
                 },
                 "User logged in successfully"
             )
         )
 })
 
-
 const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
-        {
-
-            $unset: { refreshToken: 1 }
-
-        },
-        {
-            new: true
-        }
-
+        { $unset: { refreshToken: 1 } },
+        { new: true }
     )
+
     return res
         .status(200)
         .clearCookie("accessToken", Options)
@@ -170,7 +120,6 @@ const getUserProfile = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(new ApiResponse(200, req.user, "User profile fetched successfully"))
-
 });
 
 const updateUserProfile = asyncHandler(async (req, res) => {
@@ -179,15 +128,14 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     if (!fullName || !email) {
         throw new ApiError(400, "fullName and email are required!")
     }
+
     const user = await User.findByIdAndUpdate(req.user?._id,
         {
-            $set: {
-                fullName,
-                email
-            }
+            $set: { fullName, email }
         },
-        {new: true}
+        { new: true }
     ).select("-password")
+
     return res
         .status(200)
         .json(new ApiResponse(200, user, "Account details updated successfully"))
@@ -201,22 +149,21 @@ const updatePassword = asyncHandler(async (req, res) => {
     }
 
     const user = await User.findById(req.user?._id).select("+password")
-    if(!user)
-    {
+    if(!user) {
         throw new ApiError(404, "User Not Found")
     }
-    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
-    if(!isPasswordCorrect)
-    {
-        throw new ApiError(400, "Invalid old password")
 
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+    if(!isPasswordCorrect) {
+        throw new ApiError(400, "Invalid old password")
     }
-      user.password = newPassword
+
+    user.password = newPassword
     await user.save({validateBeforeSave: false})
 
     return res
-    .status(200)
-    .json(new ApiResponse(200, {},"Password changed successfully!"))
+        .status(200)
+        .json(new ApiResponse(200, {},"Password changed successfully!"))
 })
 
 const updateUserAddress = asyncHandler(async(req, res) =>{
@@ -244,29 +191,6 @@ const updateUserAddress = asyncHandler(async(req, res) =>{
         .json(new ApiResponse(200, user, "Address updated successfully"))
 })
 
-// ADDED: new production-ready verifyEmail controller (token-based, expiry check)
-const verifyEmail = asyncHandler(async (req, res) => {
-    const { token } = req.params;
-
-    const user = await User.findOne({
-        emailVerificationToken: token,
-        emailVerificationExpires: { $gt: Date.now() }
-    });
-
-    if (!user) {
-        throw new ApiError(400, "Invalid or expired verification token");
-    }
-
-    user.isVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpires = undefined;
-    await user.save({ validateBeforeSave: false });
-
-    return res.status(200).json(
-        new ApiResponse(200, {}, "Email verified successfully. You can now log in.")
-    );
-});
-
 export {
     registerUser,
     loginUser,
@@ -274,7 +198,5 @@ export {
     getUserProfile,
     updateUserProfile,
     updatePassword,
-    updateUserAddress,
-    // ADDED: new exported function
-    verifyEmail
+    updateUserAddress
 }
