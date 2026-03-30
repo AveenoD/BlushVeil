@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
-
+import { useLocation } from 'react-router-dom'
 const Login = () => {
     const navigate = useNavigate()
     const { login } = useAuth()
     const [form, setForm] = useState({ email: '', password: '' })
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
-
+    const [showResend, setShowResend] = useState(false)
+    const [resendLoading, setResendLoading] = useState(false)
+    const location = useLocation()
+    const successMessage = location.state?.message
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
@@ -24,11 +27,27 @@ const Login = () => {
             navigate('/')
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed')
+            if (err.response?.status === 403) {
+                setShowResend(true)
+            }
         } finally {
             setLoading(false)
         }
     }
 
+    const handleResend = async () => {
+        setResendLoading(true)
+        try {
+            await api.post('/users/resend-verification', { email: form.email })
+            setError('')
+            setShowResend(false)
+            setSuccess('Verification email resent! Check your inbox.')
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to resend')
+        } finally {
+            setResendLoading(false)
+        }
+    }
     return (
         <div className="min-h-screen bg-white flex items-center justify-center px-4">
             <div className="w-full max-w-sm">
@@ -41,7 +60,20 @@ const Login = () => {
                         {error}
                     </div>
                 )}
-
+                {showResend && (
+                    <button
+                        onClick={handleResend}
+                        disabled={resendLoading}
+                        className="w-full border border-black text-black py-3 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                        {resendLoading ? 'Sending...' : 'Resend Verification Email'}
+                    </button>
+                )}
+                {successMessage && (
+                    <div className="bg-green-50 text-green-600 text-sm px-4 py-3 rounded-xl mb-4">
+                        {successMessage}
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     <div>
                         <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>

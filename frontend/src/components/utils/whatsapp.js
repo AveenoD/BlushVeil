@@ -1,4 +1,4 @@
-export const ADMIN_WHATSAPP = '918080161421' // ← sirf ek jagah number
+export const ADMIN_WHATSAPP = '918080161421' 
 
 export const buildWhatsAppMessage = (order, items, user, totalAmount) => {
     let message = `🛍️ *BLUSHVEIL — NEW ORDER*\n`

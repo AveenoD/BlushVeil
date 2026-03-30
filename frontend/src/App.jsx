@@ -10,7 +10,7 @@ import AdminPanel from './pages/AdminPanel'
 import ProfilePage from './pages/ProfilePage'
 import MyOrders from './pages/MyOrders.jsx'
 import AdminOrders from './pages/AdminOrders.jsx'
-
+import VerifyEmail from './pages/VerifyEmail'
 
 function App() {
   return (
@@ -22,6 +22,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/dress/:id" element={<ProductPage />} />
+            <Route path="/verify-email/:token" element={<VerifyEmail />} />
             <Route path="/admin" element={
               <ProtectedRoute adminOnly={true}>
                 <AdminPanel />

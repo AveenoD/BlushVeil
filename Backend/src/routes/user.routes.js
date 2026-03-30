@@ -9,7 +9,8 @@ import {
     updateUserProfile,
     updatePassword,
     updateUserAddress,
-    verifyEmail  // ✅ NEW
+    verifyEmail,
+    resendVerificationEmail
 } from '../controllers/user.controllers.js'
 
 const router = Router();
@@ -22,8 +23,7 @@ router.route('/profile').get(verifyJWT, getUserProfile)
 router.route('/update-profile').patch(verifyJWT, updateUserProfile)
 router.route('/update-password').patch(verifyJWT, updatePassword)
 router.route('/update-address').patch(verifyJWT, updateUserAddress)
-
-
+router.route('/resend-verification').post(resendVerificationEmail)
 router.route('/verify-email/:token').get(verifyEmail)
 
 export default router;

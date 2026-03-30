@@ -58,8 +58,17 @@ const DressModal = ({ dress, onClose }) => {
 
         setBuyingNow(true)
         try {
-            const items = [{ dress: dress._id, name: dress.name, image: dress.image?.url, price: dress.price, size: selectedSize, color: selectedColor || 'N/A', quantity: 1 }]
-            const res = await api.post('/orders/place', { items, totalAmount: dress.price })
+            const qty = isInCart ? cartItem.quantity : 1
+            const items = [{
+                dress: dress._id,
+                name: dress.name,
+                image: dress.image?.url,
+                price: dress.price,
+                size: selectedSize,
+                color: selectedColor || 'N/A',
+                quantity: qty  
+            }]
+            const res = await api.post('/orders/place', { items, totalAmount: dress.price * qty })
             const message = buildWhatsAppMessage(res.data.data, items, user, dress.price)
             onClose()
             openWhatsApp(message)

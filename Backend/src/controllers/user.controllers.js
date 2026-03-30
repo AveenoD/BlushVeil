@@ -5,7 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { sendVerificationEmail } from "../utils/mailer.js"; // ✅ NEW
 import crypto from "crypto";                                  // ✅ NEW
 import mongoose, { isValidObjectId } from "mongoose";
-
+import jwt from "jsonwebtoken"
 const generateAccessTokenAndRefreshToken = async (userID) => {
     try {
         const user = await User.findById(userID)
@@ -39,8 +39,26 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 
     if (existedUser) {
-        throw new ApiError(409, "User with email or phone number already exists");
+    // New token generation and email resend for unverified users
+    if (!existedUser.isVerified) {
+        const newToken = crypto.randomBytes(32).toString('hex')
+        const newExpiry = new Date(Date.now() + 60 * 60 * 1000)
+        
+        existedUser.emailVerificationToken = newToken
+        existedUser.emailVerificationExpires = newExpiry
+        await existedUser.save({ validateBeforeSave: false })
+
+        try {
+            await sendVerificationEmail(existedUser.email, newToken)
+        } catch (err) {
+            console.error("Email failed:", err.message)
+        }
+
+        throw new ApiError(400, "Account not verified. A new verification email has been sent.")
     }
+    
+    throw new ApiError(409, "User with email or phone number already exists")
+}
 
     // ✅ Generate verification token
     const verificationToken = crypto.randomBytes(32).toString('hex')
@@ -60,7 +78,8 @@ const registerUser = asyncHandler(async (req, res) => {
         await sendVerificationEmail(email, verificationToken)
     } catch (emailError) {
         // Rollback user if email fails
-        await User.findByIdAndDelete(user._id)
+        
+        // await User.findByIdAndDelete(user._id)
         throw new ApiError(500, "Failed to send verification email. Please try again.")
     }
 
@@ -80,7 +99,7 @@ const registerUser = asyncHandler(async (req, res) => {
 // ✅ NEW — verifyEmail controller
 const verifyEmail = asyncHandler(async (req, res) => {
     const { token } = req.params
-
+    
     if (!token) {
         throw new ApiError(400, "Verification token is required")
     }
@@ -89,7 +108,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
     const user = await User.findOne({
         emailVerificationToken: token
     }).select("+emailVerificationToken +emailVerificationExpires")
-
+    
     if (!user) {
         throw new ApiError(400, "Invalid verification token")
     }
@@ -152,7 +171,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         { $unset: { refreshToken: 1 } },
-        { new: true }
+        { returnDocument: 'after' }
     )
     return res
         .status(200)
@@ -192,7 +211,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         { $set: { fullName, email } },
-        { new: true }
+        { returnDocument: 'after' }
     ).select("-password")
     return res.status(200).json(new ApiResponse(200, user, "Account details updated successfully"))
 })
@@ -221,9 +240,36 @@ const updateUserAddress = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(
         req.user._id,
         { $set: updatedFields },
-        { new: true }
+        { returnDocument: 'after' }
     ).select("-password")
     return res.status(200).json(new ApiResponse(200, user, "Address updated successfully"))
+})
+
+const resendVerificationEmail = asyncHandler(async (req, res) => {
+    const { email } = req.body
+    
+    if (!email) throw new ApiError(400, "Email is required")
+
+    const user = await User.findOne({ email })
+    if (!user) throw new ApiError(404, "User not found")
+    if (user.isVerified) throw new ApiError(400, "Email already verified")
+
+    const newToken = crypto.randomBytes(32).toString('hex')
+    const newExpiry = new Date(Date.now() + 60 * 60 * 1000)
+
+    user.emailVerificationToken = newToken
+    user.emailVerificationExpires = newExpiry
+    await user.save({ validateBeforeSave: false })
+
+    try {
+        await sendVerificationEmail(email, newToken)
+    } catch (err) {
+        throw new ApiError(500, "Failed to send email. Try again.")
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Verification email sent! Check your inbox."))
 })
 
 export {
@@ -235,5 +281,6 @@ export {
     updateUserProfile,
     updatePassword,
     updateUserAddress,
-    verifyEmail  
+    verifyEmail,
+    resendVerificationEmail
 }
