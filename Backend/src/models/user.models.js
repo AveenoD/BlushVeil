@@ -1,20 +1,20 @@
-import mongoose,{Schema} from "mongoose";
+import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 
 const userSchema = new Schema({
-    fullName:{
+    fullName: {
         type: String,
         required: true
     },
 
-    email:{
+    email: {
         type: String,
         required: true,
         unique: true,
         lowercase: true,
         trim: true
-    }, 
+    },
 
     password: {
         type: String,
@@ -23,42 +23,42 @@ const userSchema = new Schema({
 
     },
 
-    phoneNumber:{
+    phoneNumber: {
         type: String,
         required: true,
         unique: true,
-        match: [/^\d{10}$/, "Invalid phone number"] 
+        match: [/^\d{10}$/, "Invalid phone number"]
     },
 
-    address:{
-        street:{
+    address: {
+        street: {
             type: String
         },
-        city:{
+        city: {
             type: String
         },
-        state:{
+        state: {
             type: String
         },
-        pincode:{
+        pincode: {
             type: String
         },
-        country :{
+        country: {
             type: String
         }
     },
 
-    role:{
-        type :String,
-        enum:["user", "admin"],
+    role: {
+        type: String,
+        enum: ["user", "admin"],
         default: "user"
     },
 
-    profilePicture:{
+    profilePicture: {
         type: String
     },
 
-    isVerified:{
+    isVerified: {
         type: Boolean,
         default: false
     },
@@ -73,8 +73,17 @@ const userSchema = new Schema({
     emailVerificationExpires: {
         type: Date,
         select: false
+    },
+
+    resetPasswordToken: {
+        type: String,
+        select: false
+    },
+    resetPasswordExpires: {
+        type: Date,
+        select: false
     }
-},{ timestamps: true });
+}, { timestamps: true });
 
 userSchema.pre('save', async function () {
     if (!this.isModified('password')) return;
@@ -82,33 +91,33 @@ userSchema.pre('save', async function () {
     this.password = await bcrypt.hash(this.password, 10);
 });
 
-userSchema.methods.isPasswordCorrect = async function(password){
+userSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.password);
 }
 
-userSchema.methods.generateAccessToken = function(){
+userSchema.methods.generateAccessToken = function () {
     return jwt.sign({
         _id: this._id,
         // Fixed: Changed from 'username' to 'email' (this was causing JWT issues)
         email: this.email,
         fullName: this.fullName
     },
-    process.env.ACCESS_TOKEN_SECRET,
-    {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRY
-    }
-)
+        process.env.ACCESS_TOKEN_SECRET,
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+        }
+    )
 }
 
-userSchema.methods.generateRefereshToken = function(){
+userSchema.methods.generateRefereshToken = function () {
     return jwt.sign({
         _id: this._id,
     },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-        expiresIn: process.env.REFRESH_TOKEN_EXPIRY
-    }
-)
+        process.env.REFRESH_TOKEN_SECRET,
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+        }
+    )
 }
 
 export const User = mongoose.model("User", userSchema);

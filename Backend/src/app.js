@@ -3,8 +3,10 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { ApiError } from './utils/ApiError.js';
-
+import { globalLimiter } from './middlewares/rateLimiter.middleware.js'
+import multer from 'multer';
 const app = express();
 
 const corsOrigin = process.env.CORS_ORIGIN
@@ -19,6 +21,13 @@ app.use(cors({
     maxAge: 86400
 }))
 
+app.use(helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false,
+}))
+
+
+app.use(globalLimiter)
 app.use(express.json({ limit: '16kb' }))
 app.use(cookieParser())
 app.use(express.urlencoded({ extended: true, limit: '16kb' }))
@@ -35,6 +44,26 @@ app.use("/api/v1/dresses", dressRouter)
 import orderRouter from './routes/order.routes.js'
 app.use('/api/v1/orders', orderRouter)
 
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        // e.g. file too large
+        return res.status(400).json({
+            success: false,
+            message: err.message,
+            errors: []
+        })
+    }
+
+    if (err && err.message === 'Only image files (jpeg, png, webp) are allowed') {
+        return res.status(415).json({
+            success: false,
+            message: err.message,
+            errors: []
+        })
+    }
+
+    next(err) // pass everything else to global error handler
+})
 
 app.use((err, req, res, next) => {
     const isDev = process.env.NODE_ENV === 'development'

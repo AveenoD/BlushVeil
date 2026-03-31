@@ -105,3 +105,25 @@ export const sendVerificationEmail = async (email, token) => {
         throw error
     }
 }
+
+export const sendResetPasswordEmail = async (email, token) => {
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`
+
+    await transporter.sendMail({
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to: email,
+        subject: 'Reset your BlushVeil password',
+        html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px">
+                <h2 style="color:#111">Reset your password 🔑</h2>
+                <p style="color:#555">We received a request to reset your password. Click the button below to set a new password. This link expires in <strong>15 minutes</strong>.</p>
+                <a href="${resetUrl}" 
+                   style="display:inline-block;margin:24px 0;padding:12px 28px;background:#111;color:#fff;text-decoration:none;border-radius:8px;font-size:14px">
+                    Reset Password
+                </a>
+                <p style="color:#999;font-size:12px">If you did not request a password reset, ignore this email. Your password will remain unchanged.</p>
+                <p style="color:#999;font-size:12px">Or copy this link: ${resetUrl}</p>
+            </div>
+        `
+    })
+}

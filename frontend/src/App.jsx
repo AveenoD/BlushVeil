@@ -11,6 +11,9 @@ import ProfilePage from './pages/ProfilePage'
 import MyOrders from './pages/MyOrders.jsx'
 import AdminOrders from './pages/AdminOrders.jsx'
 import VerifyEmail from './pages/VerifyEmail'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+
 
 function App() {
   return (
@@ -23,6 +26,8 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/dress/:id" element={<ProductPage />} />
             <Route path="/verify-email/:token" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/admin" element={
               <ProtectedRoute adminOnly={true}>
                 <AdminPanel />
