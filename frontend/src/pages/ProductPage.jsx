@@ -9,7 +9,7 @@ import { buildWhatsAppMessage, openWhatsApp } from '../components/utils/whatsapp
 const ProductPage = () => {
     const { id } = useParams()
     const navigate = useNavigate()
-    const { addToCart, cartItems, updateQuantity } = useCart()
+    const { addToCart, cartItems, updateQuantity, clearCart } = useCart()
     const { user } = useAuth()
     const [dress, setDress] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -74,8 +74,9 @@ const ProductPage = () => {
                 quantity: qty  // ← dynamic
             }]
             const res = await api.post('/orders/place', { items, totalAmount: dress.price * qty })
-            const message = buildWhatsAppMessage(res.data.data, items, user, dress.price)
+            const message = buildWhatsAppMessage(res.data.data, items, user, dress.price * qty)
             openWhatsApp(message)
+            clearCart() // Clear cart after successful 'Buy Now' order
         } catch (err) {
             alert(err.response?.data?.message || 'Something went wrong')
         } finally {

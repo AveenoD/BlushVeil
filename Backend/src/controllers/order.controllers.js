@@ -1,71 +1,105 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose"; // Added mongoose import
 import { User } from '../models/user.models.js'
 import { Order } from '../models/order.models.js'
 import { Dress } from '../models/dress.models.js'
 
 const placeOrder = asyncHandler(async (req, res) => {
-    const { items, totalAmount } = req.body
+    const { items: clientItems } = req.body; // Renamed to avoid conflict, client-provided items
 
-    if (!items || items.length === 0) {
-        throw new ApiError(400, "Cart is empty")
+    if (!clientItems || clientItems.length === 0) {
+        throw new ApiError(400, "Cart is empty");
     }
 
-    const user = await User.findById(req.user._id)
-    if (!user) throw new ApiError(404, "User not found")
+    const user = await User.findById(req.user._id);
+    if (!user) throw new ApiError(404, "User not found");
 
-    const { street, city, state, pincode, country } = user.address || {}
+    const { street, city, state, pincode, country } = user.address || {};
     if (!street || !city || !state || !pincode) {
-        throw new ApiError(400, "Please add delivery address first")
+        throw new ApiError(400, "Please add delivery address first");
     }
 
-    // ✅ STEP 1: Validate + stock check FIRST
-    for (const item of items) {
+    let session;
+    try {
+        session = await mongoose.startSession();
+        session.startTransaction();
 
-        if (!item.quantity || item.quantity <= 0) {
-            throw new ApiError(400, "Invalid quantity")
+        let calculatedTotalAmount = 0;
+        const orderItems = [];
+
+        // Step 1: Validate items, check stock, and calculate total amount on server-side
+        for (const item of clientItems) {
+            if (!item.quantity || item.quantity <= 0) {
+                throw new ApiError(400, "Invalid quantity");
+            }
+
+            const dress = await Dress.findById(item.dress).session(session);
+            if (!dress) {
+                throw new ApiError(404, "Product not found");
+            }
+
+            if (dress.stock < item.quantity) {
+                throw new ApiError(400, `${dress.name} is out of stock`);
+            }
+
+            // Calculate total amount based on actual dress price from DB
+            calculatedTotalAmount += dress.price * item.quantity;
+
+            // Prepare items for order creation, ensuring all necessary fields are present
+            orderItems.push({
+                dress: dress._id,
+                name: dress.name,
+                image: dress.image?.url, // Assuming image url is available on dress object
+                price: dress.price,
+                size: item.size, // Client-provided size
+                color: item.color || 'N/A', // Client-provided color
+                quantity: item.quantity,
+            });
         }
 
-        const dress = await Dress.findById(item.dress)
-
-        if (!dress) {
-            throw new ApiError(404, "Product not found")
+        // Step 2: Deduct stock (within the transaction)
+        for (const item of clientItems) {
+            await Dress.findByIdAndUpdate(
+                item.dress,
+                { $inc: { stock: -item.quantity } },
+                { session }
+            );
         }
 
-        if (dress.stock < item.quantity) {
-            throw new ApiError(400, `${dress.name} is out of stock`)
+        // Step 3: Create order AFTER everything is valid (within the transaction)
+        const order = await Order.create([
+            {
+                user: req.user._id,
+                items: orderItems, // Use server-validated items
+                totalAmount: calculatedTotalAmount, // Use server-calculated total
+                deliveryAddress: {
+                    street,
+                    city,
+                    state,
+                    pincode,
+                    country
+                },
+                whatsappSent: true
+            }
+        ], { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res
+            .status(201)
+            .json(new ApiResponse(201, order[0], "Order placed successfully")); // order[0] because create with array returns array
+
+    } catch (error) {
+        if (session) {
+            await session.abortTransaction();
+            session.endSession();
         }
+        throw error; // Re-throw the error for asyncHandler to catch
     }
-
-    // ✅ STEP 2: Deduct stock
-    for (const item of items) {
-        await Dress.findByIdAndUpdate(
-            item.dress,
-            { $inc: { stock: -item.quantity } }
-        )
-    }
-
-    // ✅ STEP 3: Create order AFTER everything is valid
-    const order = await Order.create({
-        user: req.user._id,
-        items,
-        totalAmount,
-        deliveryAddress: {
-            street,
-            city,
-            state,
-            pincode,
-            country
-        },
-        whatsappSent: true
-    })
-
-    return res
-        .status(201)
-        .json(new ApiResponse(201, order, "Order placed successfully"))
-})
+});
 
 const getUserOrders = asyncHandler(async (req, res) => {
 

@@ -11,6 +11,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false)
     const [showResend, setShowResend] = useState(false)
     const [resendLoading, setResendLoading] = useState(false)
+    const [success, setSuccess] = useState("") // Added success state
     const location = useLocation()
     const successMessage = location.state?.message
     const handleChange = (e) => {
@@ -41,7 +42,7 @@ const Login = () => {
             await api.post('/users/resend-verification', { email: form.email })
             setError('')
             setShowResend(false)
-            setSuccess('Verification email resent! Check your inbox.')
+            setSuccess("Verification email resent! Check your inbox.")
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to resend')
         } finally {
@@ -72,6 +73,11 @@ const Login = () => {
                 {successMessage && (
                     <div className="bg-green-50 text-green-600 text-sm px-4 py-3 rounded-xl mb-4">
                         {successMessage}
+                    </div>
+                )}
+                {success && ( // Display success message
+                    <div className="bg-green-50 text-green-600 text-sm px-4 py-3 rounded-xl mb-4">
+                        {success}
                     </div>
                 )}
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">

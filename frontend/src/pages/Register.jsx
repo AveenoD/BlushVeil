@@ -10,10 +10,10 @@ const Register = () => {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(false)
+
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
-
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -26,7 +26,7 @@ const Register = () => {
             })
             setSuccess(true)
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed')
+            setError(err.response?.data?.message || "We couldn't create your account. Please check your details and try again.") // ✅ CHANGED
         } finally {
             setLoading(false)
         }
@@ -44,6 +44,7 @@ const Register = () => {
                         {error}
                     </div>
                 )}
+
                 {success ? (
                     <div className="flex flex-col items-center gap-5 text-center">
                         <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center">
@@ -52,10 +53,11 @@ const Register = () => {
                             </svg>
                         </div>
                         <div>
-                            <p className="font-semibold text-gray-900 text-lg">Account created!</p>
+                            <p className="font-semibold text-gray-900 text-lg">Account created successfully!</p> {/* ✅ CHANGED */}
                             <p className="text-sm text-gray-400 mt-1">
-                                We've sent a verification email to <strong>{form.email}</strong>.
-                                Please verify before logging in.
+                                {/* ✅ CHANGED */}
+                                A verification email has been sent to <strong>{form.email}</strong>.
+                                Please verify your account before signing in.
                             </p>
                         </div>
                         <button
@@ -128,6 +130,7 @@ const Register = () => {
                         </button>
                     </form>
                 )}
+
                 <p className="text-sm text-center text-gray-400 mt-6">
                     Already have an account?{' '}
                     <Link to="/login" className="text-black font-medium underline">

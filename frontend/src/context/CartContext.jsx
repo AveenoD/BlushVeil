@@ -1,65 +1,61 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
-const CartContext = createContext(null)
+const CartContext = createContext(null);
+
+const CART_KEY = 'cart';
 
 export const CartProvider = ({ children }) => {
-
     const [cartItems, setCartItems] = useState(() => {
         try {
-            const saved = localStorage.getItem('cart')
-            return saved ? JSON.parse(saved) : []
+            const saved = localStorage.getItem(CART_KEY);
+            return saved ? JSON.parse(saved) : [];
         } catch {
-            return []
+            return [];
         }
-    })
+    });
 
+    // Sync with localStorage
     useEffect(() => {
-        localStorage.setItem('cart', JSON.stringify(cartItems))
-    }, [cartItems])
+        localStorage.setItem(CART_KEY, JSON.stringify(cartItems));
+    }, [cartItems]);
 
-    const addToCart = (dress, size, color, quantity = 1) => {
+    const findItemIndex = useCallback((items, dressId, size, color) => {
+        return items.findIndex(item =>
+            item.dress._id === dressId &&
+            item.selectedSize === size &&
+            item.selectedColor === color
+        );
+    }, []);
+
+    const addToCart = useCallback((dress, size, color, quantity = 1) => {
         setCartItems(prev => {
-            const existing = prev.find(item =>
-                item.dress._id === dress._id &&
-                item.selectedSize === size &&
-                item.selectedColor === color
-            )
-
-            if (existing) {
-                return prev.map(item =>
-                    item.dress._id === dress._id &&
-                    item.selectedSize === size &&
-                    item.selectedColor === color
+            const index = findItemIndex(prev, dress._id, size, color);
+            if (index !== -1) {
+                return prev.map((item, i) =>
+                    i === index
                         ? { ...item, quantity: item.quantity + quantity }
                         : item
-                )
+                );
             }
+            return [...prev, { dress, selectedSize: size, selectedColor: color, quantity }];
+        });
+    }, [findItemIndex]);
 
-            return [...prev, {
-                dress,
-                selectedSize: size,
-                selectedColor: color,
-                quantity
-            }]
-        })
-    }
-
-    const removeFromCart = (dressId, size, color) => {
+    const removeFromCart = useCallback((dressId, size, color) => {
         setCartItems(prev =>
             prev.filter(item =>
                 !(item.dress._id === dressId &&
                   item.selectedSize === size &&
                   item.selectedColor === color)
             )
-        )
-    }
+        );
+    }, []);
 
-    const updateQuantity = (dressId, size, color, newQty) => {
+    const updateQuantity = useCallback((dressId, size, color, newQty) => {
         if (newQty <= 0) {
-            removeFromCart(dressId, size, color)
-            return
+            removeFromCart(dressId, size, color);
+            return;
         }
-
         setCartItems(prev =>
             prev.map(item =>
                 item.dress._id === dressId &&
@@ -68,35 +64,44 @@ export const CartProvider = ({ children }) => {
                     ? { ...item, quantity: newQty }
                     : item
             )
-        )
-    }
+        );
+    }, [removeFromCart]);
 
-    const clearCart = () => {
-        setCartItems([])
-        localStorage.removeItem('cart')
-    }
+    // ✅ Improved clearCart - directly clears both state and localStorage
+    const clearCart = useCallback(() => {
+        setCartItems([]);
+        localStorage.removeItem(CART_KEY);   // Immediate clear
+    }, []);
 
-    const totalAmount = cartItems.reduce(
-        (sum, item) => sum + (item.dress.price * item.quantity), 0
-    )
+    const totalAmount = useMemo(() => 
+        cartItems.reduce((sum, item) => sum + (item.dress.price * item.quantity), 0), 
+    [cartItems]);
 
-    const totalItems = cartItems.reduce(
-        (sum, item) => sum + item.quantity, 0
-    )
+    const totalItems = useMemo(() => 
+        cartItems.reduce((sum, item) => sum + item.quantity, 0), 
+    [cartItems]);
+
+    const value = useMemo(() => ({
+        cartItems,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        totalAmount,
+        totalItems
+    }), [cartItems, addToCart, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems]);
 
     return (
-        <CartContext.Provider value={{
-            cartItems,
-            addToCart,
-            removeFromCart,
-            updateQuantity,
-            clearCart,
-            totalAmount,
-            totalItems
-        }}>
+        <CartContext.Provider value={value}>
             {children}
         </CartContext.Provider>
-    )
-}
+    );
+};
 
-export const useCart = () => useContext(CartContext)
+export const useCart = () => {
+    const context = useContext(CartContext);
+    if (context === null) {
+        throw new Error('useCart must be used within a CartProvider');
+    }
+    return context;
+};

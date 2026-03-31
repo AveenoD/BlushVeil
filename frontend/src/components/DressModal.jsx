@@ -7,7 +7,7 @@ import api from '../api/axios'
 import { buildWhatsAppMessage, openWhatsApp } from '../components/utils/whatsapp.js'
 
 const DressModal = ({ dress, onClose }) => {
-    const { addToCart, cartItems, updateQuantity } = useCart()
+    const { addToCart, cartItems, updateQuantity, clearCart } = useCart()
     const { user } = useAuth()
     const navigate = useNavigate()
     const [selectedSize, setSelectedSize] = useState('')
@@ -69,9 +69,10 @@ const DressModal = ({ dress, onClose }) => {
                 quantity: qty  
             }]
             const res = await api.post('/orders/place', { items, totalAmount: dress.price * qty })
-            const message = buildWhatsAppMessage(res.data.data, items, user, dress.price)
+            const message = buildWhatsAppMessage(res.data.data, items, user, dress.price * qty)
             onClose()
             openWhatsApp(message)
+            clearCart() // Clear cart after successful 'Buy Now' order
         } catch (err) {
             alert(err.response?.data?.message || 'Something went wrong')
         } finally {

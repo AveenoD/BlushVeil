@@ -21,6 +21,13 @@ const AdminPanel = () => {
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
 
+    // ✅ NEW — Delete confirmation modal state
+    const [confirmDelete, setConfirmDelete] = useState(null) // holds dressId or null
+    const [deleting, setDeleting] = useState(false)          // delete loading state
+
+    // ✅ NEW — Success message state
+    const [successMsg, setSuccessMsg] = useState('')
+
     useEffect(() => {
         const fetchDresses = async () => {
             try {
@@ -80,6 +87,12 @@ const AdminPanel = () => {
         setShowForm(true)
     }
 
+    // ✅ NEW — Show success message and auto-hide after 3 seconds
+    const showSuccess = (msg) => {
+        setSuccessMsg(msg)
+        setTimeout(() => setSuccessMsg(''), 3000)
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         setSubmitting(true)
@@ -93,7 +106,6 @@ const AdminPanel = () => {
             formData.append('stock', form.stock)
             formData.append('sizes', JSON.stringify(selectedSizes))
 
-            // Colors — comma separated string to array
             const colorsArray = form.colors
                 .split(',')
                 .map(c => c.trim())
@@ -110,6 +122,7 @@ const AdminPanel = () => {
                 setDresses(prev => [...prev, res.data.data])
             }
             setShowForm(false)
+            showSuccess('Dress saved successfully') // ✅ NEW — success feedback
         } catch (err) {
             setError(err.response?.data?.message || 'Something went wrong')
         } finally {
@@ -117,13 +130,22 @@ const AdminPanel = () => {
         }
     }
 
-    const handleDelete = async (dressId) => {
-        if (!window.confirm('Delete this dress?')) return
+    // ✅ CHANGED — Removed window.confirm, now opens custom modal
+    const handleDeleteClick = (dressId) => {
+        setConfirmDelete(dressId)
+    }
+
+    // ✅ NEW — Actual delete runs only after modal confirmation
+    const handleDeleteConfirm = async () => {
+        setDeleting(true)
         try {
-            await api.delete(`/dresses/delete/${dressId}`)
-            setDresses(prev => prev.filter(d => d._id !== dressId))
+            await api.delete(`/dresses/delete/${confirmDelete}`)
+            setDresses(prev => prev.filter(d => d._id !== confirmDelete))
+            setConfirmDelete(null)
         } catch (err) {
             console.error(err)
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -156,6 +178,13 @@ const AdminPanel = () => {
             </div>
 
             <div className="max-w-6xl mx-auto px-4 py-8">
+
+                {/* ✅ NEW — Success message toast */}
+                {successMsg && (
+                    <div className="mb-4 bg-green-50 text-green-600 text-sm px-4 py-3 rounded-xl border border-green-100">
+                        {successMsg}
+                    </div>
+                )}
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
@@ -235,7 +264,8 @@ const AdminPanel = () => {
                                                         className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors">
                                                         <Pencil size={14} />
                                                     </button>
-                                                    <button onClick={() => handleDelete(dress._id)}
+                                                    {/* ✅ CHANGED — calls handleDeleteClick instead of window.confirm */}
+                                                    <button onClick={() => handleDeleteClick(dress._id)}
                                                         className="p-1.5 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-500 transition-colors">
                                                         <Trash2 size={14} />
                                                     </button>
@@ -250,7 +280,37 @@ const AdminPanel = () => {
                 </div>
             </div>
 
-            {/* Add/Edit Form Modal */}
+            {/* ✅ NEW — Custom Delete Confirmation Modal */}
+            {confirmDelete && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4">
+                        <h3 className="font-semibold text-gray-900">Delete Dress</h3>
+                        <p className="text-sm text-gray-500">
+                            Are you sure you want to delete this dress? This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3 mt-2">
+                            {/* ✅ NEW — Cancel button */}
+                            <button
+                                onClick={() => setConfirmDelete(null)}
+                                disabled={deleting}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            {/* ✅ NEW — Delete button with loading state */}
+                            <button
+                                onClick={handleDeleteConfirm}
+                                disabled={deleting}
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                            >
+                                {deleting ? 'Deleting...' : 'Delete'} {/* ✅ NEW — loading text */}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add/Edit Form Modal — unchanged */}
             {showForm && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -268,7 +328,6 @@ const AdminPanel = () => {
                                 <div className="bg-red-50 text-red-500 text-sm px-4 py-3 rounded-xl">{error}</div>
                             )}
 
-                            {/* Image Upload */}
                             <div>
                                 <label className="text-xs font-medium text-gray-500 mb-1 block">Dress Image</label>
                                 <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center">
@@ -319,7 +378,6 @@ const AdminPanel = () => {
                                 </select>
                             </div>
 
-                            {/* Sizes */}
                             <div>
                                 <label className="text-xs font-medium text-gray-500 mb-2 block">Sizes</label>
                                 <div className="flex gap-2 flex-wrap">
@@ -340,7 +398,6 @@ const AdminPanel = () => {
                                 </div>
                             </div>
 
-                            {/* Colors */}
                             <div>
                                 <label className="text-xs font-medium text-gray-500 mb-1 block">
                                     Colors <span className="text-gray-400 font-normal">(comma separated)</span>
